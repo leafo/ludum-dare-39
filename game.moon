@@ -257,9 +257,9 @@ class Particle extends Rect
       big = i % 2 == 0
 
       radius = if big
-        math.random 5,10
+        math.random 8,14
       else
-        math.random 3,4
+        math.random 4,6
 
       o = origin + Vector(
         (random_normal! - 0.5) * 20
