@@ -304,7 +304,7 @@ class LightBuffer
         hit += 1
         sum += new_buffer[idx + o]
 
-      new_buffer[idx] =  sum / hit
+      new_buffer[idx] = 0.9 * sum / hit
 
     @buffer = new_buffer
 
@@ -383,7 +383,7 @@ export TIC = ->
     lightbuffer\draw!
 
   util = (time! - start) / 16
-  UIBar(util, 2, 100, SCREEN_W - 4, 5)\draw!
+  UIBar(util, 2, SCREEN_H - 8, SCREEN_W - 4, 5)\draw!
   -- print "Entities: #{#world.entities}", SCREEN_W - 80, 10
 
 
