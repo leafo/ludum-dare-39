@@ -157,12 +157,12 @@ class UIBar extends Rect
   new: (@p, ...) =>
     super ...
 
-  draw: =>
+  draw: (color=6) =>
     x,y,w,h = @unpack!
     rectb x,y,w,h, 15
     p = math.max 0, math.min 1, @p
     fill = math.floor p * (w - 4)
-    rect x + 2, y + 2, fill, h - 4, 6
+    rect x + 2, y + 2, fill, h - 4, color
 
 class Bullet extends Rect
   w: 5
