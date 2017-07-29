@@ -85,11 +85,21 @@ class Rect
 
     true
 
+  -- other is inside the rect
   contains: (other) =>
+    {x: ox, y: oy} = other.pos
+
+    return false if ox < @pos.x
+    return false if oy < @pos.y
+
+    return false if ox + other.w > @pos.x + @w
+    return false if oy + other.h > @pos.y + @h
+
+    true
 
 player = Rect 10, 10, 10, 10
 
-box = Rect 50, 50, 10, 15
+box = Rect 50, 50, 12, 12
 
 export TIC = ->
   cls 0
@@ -100,5 +110,5 @@ export TIC = ->
   player\draw 8
   box\draw 12
 
-  touching = player\touches box
-  print "Tocuhing? #{touching}", 5,5
+  print "Tocuhing? #{player\touches box}", 5,5
+  print "Contains? #{box\contains player}", 5,10
