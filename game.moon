@@ -97,9 +97,22 @@ class Rect
 
     true
 
-player = Rect 10, 10, 10, 10
+class UIBar extends Rect
+  p: 0
 
+  new: (@p, ...) =>
+    super ...
+
+  draw: =>
+    x,y,w,h = @unpack!
+    rectb x,y,w,h, 15
+    p = math.max 0, math.min 1, @p
+    fill = math.floor p * (w - 4)
+    rect x + 2, y + 2, fill, h - 4, 6
+
+player = Rect 10, 10, 10, 10
 box = Rect 50, 50, 12, 12
+bar = UIBar 0.5, 5, 5, 40, 8
 
 export TIC = ->
   cls 0
@@ -110,5 +123,6 @@ export TIC = ->
   player\draw 8
   box\draw 12
 
-  print "Tocuhing? #{player\touches box}", 5,5
-  print "Contains? #{box\contains player}", 5,10
+  print "Tocuhing? #{player\touches box}", 5, SCREEN_H - 10
+  print "Contains? #{box\contains player}", 5,SCREEN_H - 18
+  bar\draw!
