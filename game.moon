@@ -5,6 +5,38 @@
 -- input: gamepad
 -- safeid: leafo-ld39
 
+PAL = 0x3fc0
+set_palette = (colors) ->
+  n = (v, ...) ->
+    return unless v
+    tonumber(v, 16), n ...
+
+  for k, col in ipairs colors
+    i = k - 1
+    r,g,b = n col\match "^(..)(..)(..)$"
+    poke PAL + i * 3, r
+    poke PAL + i * 3 + 1, g
+    poke PAL + i * 3 + 2, b
+
+set_palette {
+  "0d080d"
+  "4f2b24"
+  "825b31"
+  "c59154"
+  "f0bd77"
+  "fbdf9b"
+  "fff9e4"
+  "bebbb2"
+  "7bb24e"
+  "74adbb"
+  "4180a0"
+  "32535f"
+  "2a2349"
+  "7d3840"
+  "c16c5b"
+  "e89973"
+}
+
 SCREEN_W = 240
 SCREEN_H = 136
 
@@ -218,20 +250,15 @@ class LightBuffer
     line_width = SCREEN_W /2
 
     for y=1,@h
-      trace "line: #{y}"
       for x=1,@w,2
         addr = (x - 1) / 2 + (y - 1) * line_width
         byte = peek SCREEN + addr
-        trace "fetch: #{addr}"
-
         a, b = unpack_pixels byte
 
         table.insert @buffer, a
         -- don't take color ourside buffer
         unless x == @w
           table.insert @buffer, b
-
-    trace table.concat @buffer, " "
 
   blur: =>
 
@@ -244,18 +271,20 @@ class LightBuffer
     cell_w = SCREEN_W / @res
     cell_h = SCREEN_W / @res
 
-    k = 1
+    k = 0
     for y=1,@h
       for x=1,@w
-        k += 1
 
         rect(
           (x - 1) * cell_w
           (y - 1) * cell_h
           cell_w
           cell_h
-          @buffer[k]
+          k % 16
         )
+
+        k += 1
+
 
 -- export scanline = ->
 --   trace "hi"
@@ -272,6 +301,9 @@ export TIC = ->
   for i=0,25
     pix i, 0, 11
 
+  line 0, 0, lightbuffer.w - 1, lightbuffer.h - 1, 10
+  line lightbuffer.w - 1, 0, 0, lightbuffer.h - 1, 10
+
   pix 0, 0, 6
   pix lightbuffer.w - 1, 0, 6
   pix 0, lightbuffer.h - 1, 6
@@ -287,7 +319,11 @@ export TIC = ->
   if btnp 5
     lightbuffer\read!
 
+  if lightbuffer.buffer
+    lightbuffer\draw!
+
   util = (time! - start) / 16
   UIBar(util, 2, 100, SCREEN_W - 4, 5)\draw!
   print "Entities: #{#world.entities}", SCREEN_W - 80, 10
+
 
