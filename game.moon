@@ -187,6 +187,11 @@ class Player extends Rect
   w: 10
   h: 10
 
+  draw_light: (lb) =>
+    x = 20 + math.sin(time! / 500) * 20
+    y = 7 + math.cos(time! / 100) * 7
+    rect x, y, 5, 5, 15
+
   draw: =>
     super 8
 
@@ -249,6 +254,8 @@ class LightBuffer
     byte & 0xf, (byte & 0xf0) >> 4
 
   pack_pixels = (a,b) ->
+    assert type(a) == "number", "missing a for pack"
+    assert type(b) == "number", "missing b for pack"
     a + (b << 4)
 
   SCREEN = 0
@@ -285,16 +292,16 @@ class LightBuffer
         addr = (x - 1) / 2 + (y - 1) * LINE_WIDTH
 
         if x == @w
-          poke4 SCREEN + addr, @buffer[k]
+          poke4 SCREEN + addr, math.floor(@buffer[k])
           k += 1
         else
-          poke SCREEN + addr, pack_pixels @buffer[k], @buffer[k + 1]
+          poke SCREEN + addr, pack_pixels math.floor(@buffer[k]), math.floor(@buffer[k + 1])
           k += 2
 
   blur: =>
     return nil unless @buffer
     radius = 1
-    decay = 0.9
+    decay = 1
 
     new_buffer = {}
     size = #@buffer
@@ -368,24 +375,22 @@ f = every 100, ->
 export TIC = ->
   start = time!
 
+  world\update!
+
   cls 0
-  line 0, 0, lightbuffer.w, lightbuffer.h, 15
-  line lightbuffer.w, 0, 0, lightbuffer.h, 15
-  line 0, 0, lightbuffer.w, 0, 8
+  lightbuffer\write!
+
+  for e in *world.entities
+    if e.draw_light
+      e\draw_light lightbuffer
+
   lightbuffer\read!
+  lightbuffer\blur!
 
-  unless btn 4
-    cls 0
-    lightbuffer\write!
+  cls 0
+  lightbuffer\draw!
 
-  if btn 5
-    lightbuffer\draw!
-
-  -- world\update!
-  -- world\draw!
-
-  -- util = (time! - start) / 16
-  -- UIBar(util, 2, SCREEN_H - 8, SCREEN_W - 4, 5)\draw!
-  -- -- print "Entities: #{#world.entities}", SCREEN_W - 80, 10
+  util = (time! - start) / 16
+  UIBar(util, 2, SCREEN_H - 8, SCREEN_W - 4, 5)\draw!
 
 
