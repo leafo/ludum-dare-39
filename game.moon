@@ -248,6 +248,12 @@ class LightBuffer
   unpack_pixels = (byte) ->
     byte & 0xf, (byte & 0xf0) >> 4
 
+  pack_pixels = (a,b) ->
+    a + (b << 4)
+
+  SCREEN = 0
+  LINE_WIDTH = SCREEN_W /2
+
   res: 40 -- number of vertical lines
 
   new: =>
@@ -255,27 +261,40 @@ class LightBuffer
     @h = math.floor (SCREEN_H / SCREEN_W * @res) + 1
 
   read: =>
-    SCREEN = 0
-
     -- read all the colors into an array
     @buffer = {}
 
-    line_width = SCREEN_W /2
-
     for y=1,@h
       for x=1,@w,2
-        addr = (x - 1) / 2 + (y - 1) * line_width
+        addr = (x - 1) / 2 + (y - 1) * LINE_WIDTH
         byte = peek SCREEN + addr
         a, b = unpack_pixels byte
 
         table.insert @buffer, a
-        -- don't take color ourside buffer
+        -- don't take color outside buffer
         unless x == @w
           table.insert @buffer, b
+
+  -- write the buffer back
+  write: =>
+    return nil unless @buffer
+
+    k = 1
+    for y=1,@h
+      for x=1,@w,2
+        addr = (x - 1) / 2 + (y - 1) * LINE_WIDTH
+
+        if x == @w
+          poke4 SCREEN + addr, @buffer[k]
+          k += 1
+        else
+          poke SCREEN + addr, pack_pixels @buffer[k], @buffer[k + 1]
+          k += 2
 
   blur: =>
     return nil unless @buffer
     radius = 1
+    decay = 0.9
 
     new_buffer = {}
     size = #@buffer
@@ -304,15 +323,13 @@ class LightBuffer
         hit += 1
         sum += new_buffer[idx + o]
 
-      new_buffer[idx] = 0.9 * sum / hit
+      new_buffer[idx] = decay * sum / hit
 
     @buffer = new_buffer
 
-  write: =>
-
   -- draw the buffer over the whole screen
   draw: =>
-    assert @buffer, "no buffer has been read"
+    return nil unless @buffer
 
     cell_w = SCREEN_W / @res
     cell_h = SCREEN_W / @res
@@ -330,9 +347,6 @@ class LightBuffer
         )
 
         k += 1
-
--- export scanline = ->
---   trace "hi"
 
 lightbuffer = LightBuffer!
 
@@ -353,37 +367,25 @@ f = every 100, ->
 
 export TIC = ->
   start = time!
+
   cls 0
+  line 0, 0, lightbuffer.w, lightbuffer.h, 15
+  line lightbuffer.w, 0, 0, lightbuffer.h, 15
+  line 0, 0, lightbuffer.w, 0, 8
+  lightbuffer\read!
 
-  -- write some stuff into the buffer
-  for i=0,25
-    pix i, 0, 15
+  unless btn 4
+    cls 0
+    lightbuffer\write!
 
-  line 0, 0, lightbuffer.w - 1, lightbuffer.h - 1, 15
-  line lightbuffer.w - 1, 0, 0, lightbuffer.h - 1, 15
-
-  pix 0, 0, 6
-  pix lightbuffer.w - 1, 0, 6
-  pix 0, lightbuffer.h - 1, 6
-  pix lightbuffer.w - 1, lightbuffer.h - 1, 6
-
-  -- not in buffer
-  pix SCREEN_W - 1, 0, 15
+  if btn 5
+    lightbuffer\draw!
 
   -- world\update!
   -- world\draw!
 
-  f!
-
-  if btnp 5
-    lightbuffer\read!
-    lightbuffer\blur!
-
-  if lightbuffer.buffer
-    lightbuffer\draw!
-
-  util = (time! - start) / 16
-  UIBar(util, 2, SCREEN_H - 8, SCREEN_W - 4, 5)\draw!
-  -- print "Entities: #{#world.entities}", SCREEN_W - 80, 10
+  -- util = (time! - start) / 16
+  -- UIBar(util, 2, SCREEN_H - 8, SCREEN_W - 4, 5)\draw!
+  -- -- print "Entities: #{#world.entities}", SCREEN_W - 80, 10
 
 
