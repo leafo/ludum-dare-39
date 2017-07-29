@@ -239,6 +239,7 @@ class Particle extends Rect
   w: 2
   h: 2
   life: 500
+  type: "rect"
 
   @emit_sparks: (world, origin, dir) =>
     for i=1,5
@@ -246,17 +247,35 @@ class Particle extends Rect
       r = (math.random! + math.random!) / 2
 
       dir = dir\rotate (r - 0.5) * 2 * PI/3
-      dir = dir * (random_normal!/5 + 1)
+      dir = dir * (random_normal!/2 + 1)
 
       accel = -dir / 40
       world\add @ origin, dir, accel
+
+  @emit_explosion: (world, origin) =>
+    for i=1,2
+      big = i % 2 == 0
+
+      radius = if big
+        math.random 5,10
+      else
+        math.random 3,4
+
+      o = origin + Vector(
+        (random_normal! - 0.5) * 20
+        (random_normal! - 0.5) * 20
+      )
+
+      world\add with @ o
+        .radius = radius
+        .type = "circle"
 
   draw_light: (lb) =>
     x,y,w,h = @unpack!
     light = math.floor (1 - @p!) * 5
     lb\rect x,y,w,h, light
 
-  new: (@pos, @vel, @accel=Vector!) =>
+  new: (@pos, @vel=Vector!, @accel=Vector!) =>
 
   update: (world) =>
     @vel += @accel
@@ -277,7 +296,14 @@ class Particle extends Rect
 
   draw: =>
     color = math.floor (1 - @p!) * 12
-    super color
+
+    switch @type
+      when "rect"
+        super color
+      when "circle"
+        center = @center!
+        r = (@radius or 5) * (1 - @p!)
+        circ center.x, center.y, r, color
 
 class Bullet extends Rect
   w: 5
@@ -291,6 +317,7 @@ class Bullet extends Rect
     unless world\contains @
       world\remove @
       Particle\emit_sparks world, @pos, @dir\normalized!\rotate(PI)
+      Particle\emit_explosion world, @pos
 
   draw_light: (lb) =>
     lb\rect @unpack!
@@ -365,9 +392,8 @@ class Player extends Rect
 
     @pos += @dir * 2
 
-    @shoot_lock or= every 100, (world) -> @shoot world
-
-    @.shoot_lock world
+    -- @shoot_lock or= every 100, (world) -> @shoot world
+    -- @.shoot_lock world
 
     if btnp 4
       @shoot world
