@@ -197,6 +197,9 @@ world = World!
 
 
 class LightBuffer
+  unpack_pixels = (byte) ->
+    byte & 0xf, (byte & 0xf0) >> 4
+
   res: 20 -- number of vertical lines
 
   new: =>
@@ -209,42 +212,50 @@ class LightBuffer
   read: =>
     SCREEN = 0
 
-    unpack_pixels = (byte) ->
-      byte & 0xf, (byte & 0xf0) >> 4
+    -- read all the colors into an array
+    @buffer = {}
 
-    screen = {}
+    line_width = SCREEN_W /2
 
-    SCREEN_BYTES = SCREEN_W * SCREEN_H / 2
-    for i=0,SCREEN_BYTES-1
-      byte = peek SCREEN + i
-      a, b = unpack_pixels byte
-      table.insert screen, a
-      table.insert screen, b
+    for y=1,@h
+      trace "line: #{y}"
+      for x=1,@w,2
+        addr = (x - 1) / 2 + (y - 1) * line_width
+        byte = peek SCREEN + addr
+        trace "fetch: #{addr}"
 
-    trace table.concat [b for b in *screen[1,SCREEN_W]], " "
+        a, b = unpack_pixels byte
+
+        table.insert @buffer, a
+        -- don't take color ourside buffer
+        unless x == @w
+          table.insert @buffer, b
+
+    trace table.concat @buffer, " "
 
   blur: =>
 
   write: =>
 
-  -- debug the buffer
+  -- draw the buffer over the whole screen
   draw: =>
-    color = 1
+    assert @buffer, "no buffer has been read"
 
     cell_w = SCREEN_W / @res
     cell_h = SCREEN_W / @res
 
+    k = 1
     for y=1,@h
       for x=1,@w
+        k += 1
+
         rect(
           (x - 1) * cell_w
           (y - 1) * cell_h
           cell_w
           cell_h
-          color
+          @buffer[k]
         )
-
-        color = (color + 1) % 16
 
 -- export scanline = ->
 --   trace "hi"
@@ -256,9 +267,17 @@ last_time = 0
 export TIC = ->
   start = time!
   cls 0
+
+  -- write some stuff into the buffer
   for i=0,25
     pix i, 0, 11
 
+  pix 0, 0, 6
+  pix lightbuffer.w - 1, 0, 6
+  pix 0, lightbuffer.h - 1, 6
+  pix lightbuffer.w - 1, lightbuffer.h - 1, 6
+
+  -- not in buffer
   pix SCREEN_W - 1, 0, 15
 
   --lightbuffer\draw!
@@ -268,9 +287,7 @@ export TIC = ->
   if btnp 5
     lightbuffer\read!
 
-  -- rectb 0, 0, SCREEN_W, SCREEN_H, 15
-
   util = (time! - start) / 16
-  UIBar(util, 2,2, SCREEN_W - 4, 5)\draw!
+  UIBar(util, 2, 100, SCREEN_W - 4, 5)\draw!
   print "Entities: #{#world.entities}", SCREEN_W - 80, 10
 
