@@ -266,6 +266,20 @@ class Player extends Rect
       -- pointing = center + d * 50
       -- line center.x, center.y, pointing.x, pointing.y, 11
 
+      dist = 15
+
+      -- draw reticle
+      ab = center + d\rotate(PI/4) * dist
+      ab2 = center + d\rotate(-PI/4) * dist
+      ab3 = center + d\rotate(PI/4 + PI) * dist
+      ab4 = center + d\rotate(-PI/4 + PI) * dist
+
+      line ab.x, ab.y, ab2.x, ab2.y, 11
+      line ab2.x, ab2.y, ab3.x, ab3.y, 11
+      line ab3.x, ab3.y, ab4.x, ab4.y, 11
+      line ab4.x, ab4.y, ab.x, ab.y, 11
+
+
   shoot: (world) =>
     return unless @last_dir
     origin = @center! + @last_dir * 8
