@@ -168,6 +168,8 @@ class World extends Rect
   h: SCREEN_H
 
   new: =>
+    super!
+
     @player = Player 10, 10
 
     @entities = {
@@ -192,9 +194,76 @@ class World extends Rect
 
 world = World!
 
+
+
+class LightBuffer
+  res: 8
+
+  new: =>
+    @w = math.floor SCREEN_W / @res
+    @h = math.floor SCREEN_H / @res
+
+  size: =>
+    "#{@w} #{@h}: #{@w * @h}"
+
+  read: =>
+    trace _VERSION
+    SCREEN = 0
+    left = 0x0f
+    right = 0xf0
+
+    unpack_pixels = (byte) ->
+      byte & left, byte & right
+
+    a,b = unpack_pixels peek SCREEN
+    trace "#{a}, #{b}"
+
+  blur: =>
+
+  write: =>
+
+  -- debug the buffer
+  draw: =>
+    color = 1
+
+    cell_w = @w
+    cell_h = @h
+
+    for y=1,@res
+      for x=1,@res
+        rect(
+          (x - 1) * cell_w
+          (y - 1) * cell_h
+          cell_w
+          cell_h
+          color
+        )
+
+        color = (color + 1) % 16
+
+-- export scanline = ->
+--   trace "hi"
+
+lightbuffer = LightBuffer!
+
+last_time = 0
+
 export TIC = ->
+  start = time!
   cls 0
-  rectb 0, 0, SCREEN_W, SCREEN_H, 15
+
+  lightbuffer\draw!
 
   world\update!
   world\draw!
+
+  if btnp 5
+    trace "reading buffer: #{lightbuffer\size!}"
+    lightbuffer\read!
+
+  rectb 0, 0, SCREEN_W, SCREEN_H, 15
+
+  util = (time! - start) / 16
+  UIBar(util, 2,2, SCREEN_W - 4, 5)\draw!
+  print "Entities: #{#world.entities}", SCREEN_W - 80, 10
+
