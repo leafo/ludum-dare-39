@@ -123,8 +123,10 @@ class Bullet extends Rect
   new: (pos, @dir) =>
     @pos = pos - Vector @w / 2, @h / 2
 
-  update: =>
+  update: (world) =>
     @pos += @dir
+    unless world\contains @
+      world\remove @
 
   draw: (color=15) =>
     x, y = @center!\unpack!
