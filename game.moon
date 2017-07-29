@@ -293,6 +293,21 @@ lightbuffer = LightBuffer!
 
 last_time = 0
 
+-- call fn every ms
+every = (ms, fn) ->
+  local start
+  ->
+    unless start
+      start = time!
+      return
+
+    while time! - start > ms
+      start += ms
+      fn!
+
+f = every 1000, ->
+  trace "tick: #{time!}"
+
 export TIC = ->
   start = time!
   cls 0
