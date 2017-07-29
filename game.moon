@@ -306,7 +306,7 @@ class LightBuffer
     @w = @res
     @h = floor (SCREEN_H / SCREEN_W * @res) + 1
 
-  rect: (x, y, w, h, b=15) =>
+  rect: (x, y, w, h, b=8) =>
     return nil unless @buffer
     scalex = @w / SCREEN_W
     scaley = @h / SCREEN_H
@@ -329,7 +329,7 @@ class LightBuffer
     lh -= ly
 
     ratio = math.max 0.2, math.min 1, area / (lw * lh)
-    rect lx, ly, lw, lh, floor ratio * 15 + 0.5
+    rect lx, ly, lw, lh, floor ratio * b + 0.5
 
   read: =>
     -- read all the colors into an array
@@ -456,7 +456,7 @@ export TIC = ->
       e\draw_light lightbuffer
 
   lightbuffer\read!
-  lightbuffer\blur!
+  f!
 
   cls 0
   clip 0, 0, SCREEN_W, VIEW_H
