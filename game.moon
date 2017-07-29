@@ -18,7 +18,7 @@ set_palette = (colors) ->
     poke PAL + i * 3 + 1, g
     poke PAL + i * 3 + 2, b
 
-{:cos, :sin, :floor} = math
+{:cos, :sin, :floor, :atan2, pi: PI} = math
 
 PAL_GRAD = {
   "210D14"
@@ -82,6 +82,9 @@ class Vector
   x: 0
   y: 0
 
+  @from_radians: (rads) =>
+    Vector cos(rads), sin(rads)
+
   @from_input: =>
     y = if btn 0 then -1
     elseif btn 1 then 1
@@ -94,6 +97,28 @@ class Vector
     @(x, y)\normalized!
 
   new: (@x, @y) =>
+
+  radians: =>
+    atan2 @y, @x
+
+  rotate: (rads) =>
+    c, s = cos(rads), sin(rads)
+    Vector @x*c - @y*s, @y*c + @x*s
+
+  -- returns new vector with average angle betwen the two
+  -- returns unit vector
+  merge_angle: (other, p=0.5) =>
+    a = @radians!
+    b = other\radians!
+
+    if b - a > PI
+      a += 2 * PI
+
+    if b - a < -PI
+      a -= 2 * PI
+
+    rad = a + (b - a) * p
+    @@from_radians rad
 
   unpack: =>
     @x, @y
@@ -226,7 +251,8 @@ class Player extends Rect
 
     -- draw gun
     if d = @last_dir
-      pointing = center + d * 10
+      -- d = Vector\from_radians time! / 1000
+
       pos = center
       for i=1,4
         circ pos.x, pos.y, 3, 2
@@ -237,17 +263,24 @@ class Player extends Rect
         circ pos.x, pos.y, 2, 15
         pos += d * 2
 
-      -- line center.x, center.y, pointing.x, pointing.y, 11
+      if @aim_dir
+        pointing = center + @aim_dir * 50
+        line center.x, center.y, pointing.x, pointing.y, 11
 
   shoot: (world) =>
     return unless @last_dir
-    world\add Bullet @center!, @last_dir * 5
+    origin = @center! + @last_dir * 8
+    world\add Bullet origin, @last_dir * 5
 
   update: (world) =>
     @dir = Vector\from_input!
 
     if @dir\nonzero!
       @last_dir = @dir
+      @aim_dir or= @last_dir
+
+    if @aim_dir and @last_dir
+      @aim_dir = @aim_dir\merge_angle @last_dir, 0.2
 
     @pos += @dir * 2
 
@@ -468,5 +501,16 @@ export TIC = ->
   util = (time! - start) / 16
   print "Energy", 0, SCREEN_H - 6
   UIBar(util, 0, SCREEN_H - 15, SCREEN_W, 5)\draw!
+
+-- up = Vector 0, -1
+-- down = Vector 0, 1
+-- left = Vector -1, 0
+-- right = Vector 1, 0
+-- 
+-- print "u", up, up\radians!
+-- print "r", right, right\radians!
+-- print "d", down, down\radians!
+-- print "l", left, left\radians!
+-- 
 
 
