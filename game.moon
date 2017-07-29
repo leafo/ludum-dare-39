@@ -250,7 +250,7 @@ class Player extends Rect
     circ x, y, r, 15
 
     -- draw gun
-    if d = @last_dir
+    if d = @aim_dir
       -- d = Vector\from_radians time! / 1000
 
       pos = center
@@ -263,9 +263,8 @@ class Player extends Rect
         circ pos.x, pos.y, 2, 15
         pos += d * 2
 
-      if @aim_dir
-        pointing = center + @aim_dir * 50
-        line center.x, center.y, pointing.x, pointing.y, 11
+      -- pointing = center + d * 50
+      -- line center.x, center.y, pointing.x, pointing.y, 11
 
   shoot: (world) =>
     return unless @last_dir
@@ -499,7 +498,7 @@ export TIC = ->
 
   clip!
   util = (time! - start) / 16
-  print "Energy", 0, SCREEN_H - 6
+  print "Energy: 0, Entities: #{#world.entities}", 0, SCREEN_H - 6
   UIBar(util, 0, SCREEN_H - 15, SCREEN_W, 5)\draw!
 
 -- up = Vector 0, -1
