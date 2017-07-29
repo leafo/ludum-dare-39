@@ -197,26 +197,31 @@ world = World!
 
 
 class LightBuffer
-  res: 8
+  res: 20 -- number of vertical lines
 
   new: =>
-    @w = math.floor SCREEN_W / @res
-    @h = math.floor SCREEN_H / @res
+    @w = @res
+    @h = math.floor (SCREEN_H / SCREEN_W * @res) + 1
 
   size: =>
     "#{@w} #{@h}: #{@w * @h}"
 
   read: =>
-    trace _VERSION
     SCREEN = 0
-    left = 0x0f
-    right = 0xf0
 
     unpack_pixels = (byte) ->
-      byte & left, byte & right
+      byte & 0xf, (byte & 0xf0) >> 4
 
-    a,b = unpack_pixels peek SCREEN
-    trace "#{a}, #{b}"
+    screen = {}
+
+    SCREEN_BYTES = SCREEN_W * SCREEN_H / 2
+    for i=0,SCREEN_BYTES-1
+      byte = peek SCREEN + i
+      a, b = unpack_pixels byte
+      table.insert screen, a
+      table.insert screen, b
+
+    trace table.concat [b for b in *screen[1,SCREEN_W]], " "
 
   blur: =>
 
@@ -226,11 +231,11 @@ class LightBuffer
   draw: =>
     color = 1
 
-    cell_w = @w
-    cell_h = @h
+    cell_w = SCREEN_W / @res
+    cell_h = SCREEN_W / @res
 
-    for y=1,@res
-      for x=1,@res
+    for y=1,@h
+      for x=1,@w
         rect(
           (x - 1) * cell_w
           (y - 1) * cell_h
@@ -251,17 +256,19 @@ last_time = 0
 export TIC = ->
   start = time!
   cls 0
+  for i=0,25
+    pix i, 0, 11
 
-  lightbuffer\draw!
+  pix SCREEN_W - 1, 0, 15
 
-  world\update!
-  world\draw!
+  --lightbuffer\draw!
+  -- world\update!
+  -- world\draw!
 
   if btnp 5
-    trace "reading buffer: #{lightbuffer\size!}"
     lightbuffer\read!
 
-  rectb 0, 0, SCREEN_W, SCREEN_H, 15
+  -- rectb 0, 0, SCREEN_W, SCREEN_H, 15
 
   util = (time! - start) / 16
   UIBar(util, 2,2, SCREEN_W - 4, 5)\draw!
