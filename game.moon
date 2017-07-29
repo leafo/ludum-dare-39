@@ -18,7 +18,9 @@ set_palette = (colors) ->
     poke PAL + i * 3 + 1, g
     poke PAL + i * 3 + 2, b
 
-set_palette {
+{:cos, :sin, :floor} = math
+
+PAL_GRAD = {
   "210D14"
   "2D1C20"
   "382C2C"
@@ -35,6 +37,9 @@ set_palette {
   "B9D6B0"
   "C4E6BC"
   "D0F5C8"
+}
+
+PAL_REG = {
   -- "0d080d"
   -- "4f2b24"
   -- "825b31"
@@ -51,10 +56,27 @@ set_palette {
   -- "7d3840"
   -- "c16c5b"
   -- "e89973"
+
+  "140C1C"
+  "442434"
+  "30346D"
+  "4E4A4F"
+  "854C30"
+  "346524"
+  "D04648"
+  "757161"
+  "597DCE"
+  "D27D2C"
+  "8595A1"
+  "6DAA2C"
+  "D2AA99"
+  "6DC2CA"
+  "DAD45E"
 }
 
 SCREEN_W = 240
 SCREEN_H = 136
+VIEW_H = SCREEN_H - 15
 
 class Vector
   x: 0
@@ -161,7 +183,7 @@ class UIBar extends Rect
     x,y,w,h = @unpack!
     rectb x,y,w,h, 15
     p = math.max 0, math.min 1, @p
-    fill = math.floor p * (w - 4)
+    fill = floor p * (w - 4)
     rect x + 2, y + 2, fill, h - 4, color
 
 class Bullet extends Rect
@@ -176,9 +198,14 @@ class Bullet extends Rect
     unless world\contains @
       world\remove @
 
+  draw_light: (lb) =>
+    lb\rect @unpack!
+
   draw: (color=15) =>
     x, y = @center!\unpack!
-    circ x, y, @w/2, color
+    r = floor @w/2
+    circ x, y, r + 1, 3
+    circ x, y, r, color
 
   __tostring: =>
     "Bullet(#{@pos}, #{@w}, #{@h})"
@@ -188,17 +215,29 @@ class Player extends Rect
   h: 10
 
   draw_light: (lb) =>
-    x = 20 + math.sin(time! / 500) * 20
-    y = 7 + math.cos(time! / 100) * 7
-    rect x, y, 5, 5, 15
+    lb\rect @unpack!
 
   draw: =>
-    super 8
-
     center = @center!
-    if @dir
-      pointing = center + @dir * 10
-      line center.x, center.y, pointing.x, pointing.y, 11
+    x, y = center\unpack!
+    r = floor @w/2
+    circ x, y, r+1, 3
+    circ x, y, r, 15
+
+    -- draw gun
+    if d = @last_dir
+      pointing = center + d * 10
+      pos = center
+      for i=1,4
+        circ pos.x, pos.y, 3, 2
+        pos += d * 2
+
+      pos = center
+      for i=1,4
+        circ pos.x, pos.y, 2, 15
+        pos += d * 2
+
+      -- line center.x, center.y, pointing.x, pointing.y, 11
 
   shoot: (world) =>
     return unless @last_dir
@@ -261,11 +300,36 @@ class LightBuffer
   SCREEN = 0
   LINE_WIDTH = SCREEN_W /2
 
-  res: 40 -- number of vertical lines
+  res: 20 -- number of vertical lines
 
   new: =>
     @w = @res
-    @h = math.floor (SCREEN_H / SCREEN_W * @res) + 1
+    @h = floor (SCREEN_H / SCREEN_W * @res) + 1
+
+  rect: (x, y, w, h, b=15) =>
+    return nil unless @buffer
+    scalex = @w / SCREEN_W
+    scaley = @h / SCREEN_H
+
+    lx = x*scalex
+    ly = y*scaley
+    lw = w*scalex
+    lh = h*scaley
+
+    -- make it cover whole pixels
+    area = lw * ly
+
+    lw = floor(lx + lw + 0.5)
+    lh = floor(ly + lh + 0.5)
+
+    lx = floor lx
+    ly = floor ly
+
+    lw -= lx
+    lh -= ly
+
+    ratio = math.max 0.2, math.min 1, area / (lw * lh)
+    rect lx, ly, lw, lh, floor ratio * 15 + 0.5
 
   read: =>
     -- read all the colors into an array
@@ -292,10 +356,10 @@ class LightBuffer
         addr = (x - 1) / 2 + (y - 1) * LINE_WIDTH
 
         if x == @w
-          poke4 SCREEN + addr, math.floor(@buffer[k])
+          poke4 SCREEN + addr, floor(@buffer[k])
           k += 1
         else
-          poke SCREEN + addr, pack_pixels math.floor(@buffer[k]), math.floor(@buffer[k + 1])
+          poke SCREEN + addr, pack_pixels floor(@buffer[k]), floor(@buffer[k + 1])
           k += 2
 
   blur: =>
@@ -344,7 +408,7 @@ class LightBuffer
     k = 1
     for y=1,@h
       for x=1,@w
-        c = math.floor @buffer[k]
+        c = floor @buffer[k]
         tx, ty = (x - 1) * cell_w, (y - 1) * cell_h
 
         rect(
@@ -372,6 +436,13 @@ every = (ms, fn) ->
 f = every 100, ->
   lightbuffer\blur!
 
+export scanline = (row) ->
+  if row == 0
+    set_palette PAL_GRAD
+
+  if row == VIEW_H
+    set_palette PAL_REG
+
 export TIC = ->
   start = time!
 
@@ -388,9 +459,14 @@ export TIC = ->
   lightbuffer\blur!
 
   cls 0
+  clip 0, 0, SCREEN_W, VIEW_H
   lightbuffer\draw!
 
+  world\draw!
+
+  clip!
   util = (time! - start) / 16
-  UIBar(util, 2, SCREEN_H - 8, SCREEN_W - 4, 5)\draw!
+  print "Energy", 0, SCREEN_H - 6
+  UIBar(util, 0, SCREEN_H - 15, SCREEN_W, 5)\draw!
 
 
