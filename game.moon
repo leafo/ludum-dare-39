@@ -121,7 +121,7 @@ class Bullet extends Rect
   h: 5
 
   new: (pos, @dir) =>
-    @pos = pos - Vector @w / @w, @h / 2
+    @pos = pos - Vector @w / 2, @h / 2
 
   update: =>
     @pos += @dir
