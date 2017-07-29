@@ -28,6 +28,9 @@ class Vector
   unpack: =>
     @x, @y
 
+  nonzero: =>
+    @x != 0 or @y != 0
+
   len: =>
     return math.abs(@x) if @y == 0
     return math.abs(@y) if @x == 0
@@ -97,6 +100,9 @@ class Rect
 
     true
 
+  center: =>
+    @pos + Vector @w/2, @h/2
+
 class UIBar extends Rect
   p: 0
 
@@ -110,19 +116,83 @@ class UIBar extends Rect
     fill = math.floor p * (w - 4)
     rect x + 2, y + 2, fill, h - 4, 6
 
-player = Rect 10, 10, 10, 10
-box = Rect 50, 50, 12, 12
-bar = UIBar 0.5, 5, 5, 40, 8
+class Bullet extends Rect
+  w: 5
+  h: 5
+
+  new: (pos, @dir) =>
+    @pos = pos - Vector @w / @w, @h / 2
+
+  update: =>
+    @pos += @dir
+
+  draw: (color=15) =>
+    x, y = @center!\unpack!
+    circ x, y, @w/2, color
+
+  __tostring: =>
+    "Bullet(#{@pos}, #{@w}, #{@h})"
+
+class Player extends Rect
+  w: 10
+  h: 10
+
+  draw: =>
+    super 8
+
+    center = @center!
+    if @dir
+      pointing = center + @dir * 10
+      line center.x, center.y, pointing.x, pointing.y, 11
+
+  shoot: (world) =>
+    return unless @last_dir
+    world\add Bullet @center!, @last_dir * 5
+
+  update: (world) =>
+    @dir = Vector\from_input!
+
+    if @dir\nonzero!
+      @last_dir = @dir
+
+    @pos += @dir * 2
+
+    if btnp 4
+      @shoot world
+
+
+class World extends Rect
+  w: SCREEN_W
+  h: SCREEN_H
+
+  new: =>
+    @player = Player 10, 10
+
+    @entities = {
+      @player
+    }
+
+  draw: =>
+    for entity in *@entities
+      entity\draw!
+
+  remove: (to_remove) =>
+    @entities = [e for e in *@entities when e != to_remove]
+
+  add: (e) =>
+    table.insert @entities, e
+
+  update: =>
+    for entity in *@entities
+      entity\update @
+
+-- bar = UIBar 0.5, 5, 5, 40, 8
+
+world = World!
 
 export TIC = ->
   cls 0
   rectb 0, 0, SCREEN_W, SCREEN_H, 15
 
-  player.pos += Vector\from_input! * 2
-
-  player\draw 8
-  box\draw 12
-
-  print "Tocuhing? #{player\touches box}", 5, SCREEN_H - 10
-  print "Contains? #{box\contains player}", 5,SCREEN_H - 18
-  bar\draw!
+  world\update!
+  world\draw!
