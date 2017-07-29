@@ -78,6 +78,23 @@ SCREEN_W = 240
 SCREEN_H = 136
 VIEW_H = SCREEN_H - 15
 
+-- call fn every ms
+every = (ms, fn) ->
+  local start
+  (...) ->
+    unless start
+      start = time!
+      return
+
+    while time! - start > ms
+      start += ms
+      fn ...
+
+random_normal = do
+  r = math.random
+  ->
+    (r! + r! + r! + r! + r! + r! + r! + r! + r! + r! + r! + r!) / 12
+
 class Vector
   x: 0
   y: 0
@@ -138,11 +155,17 @@ class Vector
 
     Vector @x / len, @y / len
 
+  __unm: =>
+    Vector -@x, -@y
+
   __add: (other) =>
     Vector @x + other.x, @y + other.y
 
   __sub: (other) =>
     Vector @x - other.x, @y - other.y
+
+  __div: (num) =>
+    Vector @x / num, @y / num
 
   __mul: (a,b) ->
     if type(a) == "number"
@@ -211,6 +234,51 @@ class UIBar extends Rect
     fill = floor p * (w - 4)
     rect x + 2, y + 2, fill, h - 4, color
 
+-- a square particle
+class Particle extends Rect
+  w: 2
+  h: 2
+  life: 500
+
+  @emit_sparks: (world, origin, dir) =>
+    for i=1,5
+      -- shake it
+      r = (math.random! + math.random!) / 2
+
+      dir = dir\rotate (r - 0.5) * 2 * PI/3
+      dir = dir * (random_normal!/5 + 1)
+
+      accel = -dir / 40
+      world\add @ origin, dir, accel
+
+  draw_light: (lb) =>
+    x,y,w,h = @unpack!
+    light = math.floor (1 - @p!) * 5
+    lb\rect x,y,w,h, light
+
+  new: (@pos, @vel, @accel=Vector!) =>
+
+  update: (world) =>
+    @vel += @accel
+    @pos += @vel
+
+    @spawn or= time!
+
+    -- unless world\touches @
+    --   world\remove @
+
+    if time! - @spawn > @life
+      world\remove @
+
+  -- percentage of life lived
+  p: =>
+    return 0 unless @spawn
+    math.max 0, math.min 1, (time! - @spawn) / @life
+
+  draw: =>
+    color = math.floor (1 - @p!) * 12
+    super color
+
 class Bullet extends Rect
   w: 5
   h: 5
@@ -222,6 +290,7 @@ class Bullet extends Rect
     @pos += @dir
     unless world\contains @
       world\remove @
+      Particle\emit_sparks world, @pos, @dir\normalized!\rotate(PI)
 
   draw_light: (lb) =>
     lb\rect @unpack!
@@ -239,6 +308,10 @@ class Player extends Rect
   w: 10
   h: 10
 
+  new: (...) =>
+    super ...
+    @aim_dir = Vector 1, 0
+
   draw_light: (lb) =>
     lb\rect @unpack!
 
@@ -251,8 +324,6 @@ class Player extends Rect
 
     -- draw gun
     if d = @aim_dir
-      -- d = Vector\from_radians time! / 1000
-
       pos = center
       for i=1,4
         circ pos.x, pos.y, 3, 2
@@ -262,9 +333,6 @@ class Player extends Rect
       for i=1,4
         circ pos.x, pos.y, 2, 15
         pos += d * 2
-
-      -- pointing = center + d * 50
-      -- line center.x, center.y, pointing.x, pointing.y, 11
 
       dist = 15
 
@@ -281,9 +349,9 @@ class Player extends Rect
 
 
   shoot: (world) =>
-    return unless @last_dir
-    origin = @center! + @last_dir * 8
-    world\add Bullet origin, @last_dir * 5
+    return unless @aim_dir
+    origin = @center! + @aim_dir * 8
+    world\add Bullet origin, @aim_dir * 5
 
   update: (world) =>
     @dir = Vector\from_input!
@@ -296,6 +364,10 @@ class Player extends Rect
       @aim_dir = @aim_dir\merge_angle @last_dir, 0.2
 
     @pos += @dir * 2
+
+    @shoot_lock or= every 100, (world) -> @shoot world
+
+    @.shoot_lock world
 
     if btnp 4
       @shoot world
@@ -328,11 +400,8 @@ class World extends Rect
     for entity in *@entities
       entity\update @
 
--- bar = UIBar 0.5, 5, 5, 40, 8
-
-world = World!
-
-
+  __tostring: =>
+    "World()"
 
 class LightBuffer
   unpack_pixels = (byte) ->
@@ -467,18 +536,6 @@ class LightBuffer
 
 lightbuffer = LightBuffer!
 
--- call fn every ms
-every = (ms, fn) ->
-  local start
-  ->
-    unless start
-      start = time!
-      return
-
-    while time! - start > ms
-      start += ms
-      fn!
-
 f = every 100, ->
   lightbuffer\blur!
 
@@ -489,7 +546,10 @@ export scanline = (row) ->
   if row == VIEW_H
     set_palette PAL_REG
 
+local world
 export TIC = ->
+  world or= World!
+
   start = time!
 
   world\update!
@@ -519,11 +579,11 @@ export TIC = ->
 -- down = Vector 0, 1
 -- left = Vector -1, 0
 -- right = Vector 1, 0
--- 
+--
 -- print "u", up, up\radians!
 -- print "r", right, right\radians!
 -- print "d", down, down\radians!
 -- print "l", left, left\radians!
--- 
+--
 
 
