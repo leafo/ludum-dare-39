@@ -248,14 +248,11 @@ class LightBuffer
   unpack_pixels = (byte) ->
     byte & 0xf, (byte & 0xf0) >> 4
 
-  res: 20 -- number of vertical lines
+  res: 40 -- number of vertical lines
 
   new: =>
     @w = @res
     @h = math.floor (SCREEN_H / SCREEN_W * @res) + 1
-
-  size: =>
-    "#{@w} #{@h}: #{@w * @h}"
 
   read: =>
     SCREEN = 0
@@ -277,6 +274,39 @@ class LightBuffer
           table.insert @buffer, b
 
   blur: =>
+    return nil unless @buffer
+    radius = 1
+
+    new_buffer = {}
+    size = #@buffer
+
+    -- blur on y
+    for idx=1,size
+      hit = 0
+      sum = 0
+
+      for o=-radius,radius
+        if val = @buffer[idx + o * @w]
+          sum += val
+          hit += 1
+
+
+      new_buffer[idx] =  sum / hit
+
+    -- blur on y axis
+    for idx=1,size
+      hit = 0
+      sum = 0
+
+      for o=-radius,radius
+        x = (idx - 1) % @w + o
+        continue if x < 0 or x >= @w
+        hit += 1
+        sum += new_buffer[idx + o]
+
+      new_buffer[idx] =  sum / hit
+
+    @buffer = new_buffer
 
   write: =>
 
@@ -287,27 +317,24 @@ class LightBuffer
     cell_w = SCREEN_W / @res
     cell_h = SCREEN_W / @res
 
-    k = 0
+    k = 1
     for y=1,@h
       for x=1,@w
+        c = math.floor @buffer[k]
+        tx, ty = (x - 1) * cell_w, (y - 1) * cell_h
 
         rect(
-          (x - 1) * cell_w
-          (y - 1) * cell_h
-          cell_w
-          cell_h
-          k % 16
+          tx, ty
+          cell_w, cell_h
+          c
         )
 
         k += 1
-
 
 -- export scanline = ->
 --   trace "hi"
 
 lightbuffer = LightBuffer!
-
-last_time = 0
 
 -- call fn every ms
 every = (ms, fn) ->
@@ -321,8 +348,8 @@ every = (ms, fn) ->
       start += ms
       fn!
 
-f = every 1000, ->
-  trace "tick: #{time!}"
+f = every 100, ->
+  lightbuffer\blur!
 
 export TIC = ->
   start = time!
@@ -330,10 +357,10 @@ export TIC = ->
 
   -- write some stuff into the buffer
   for i=0,25
-    pix i, 0, 11
+    pix i, 0, 15
 
-  line 0, 0, lightbuffer.w - 1, lightbuffer.h - 1, 10
-  line lightbuffer.w - 1, 0, 0, lightbuffer.h - 1, 10
+  line 0, 0, lightbuffer.w - 1, lightbuffer.h - 1, 15
+  line lightbuffer.w - 1, 0, 0, lightbuffer.h - 1, 15
 
   pix 0, 0, 6
   pix lightbuffer.w - 1, 0, 6
@@ -343,18 +370,20 @@ export TIC = ->
   -- not in buffer
   pix SCREEN_W - 1, 0, 15
 
-  --lightbuffer\draw!
   -- world\update!
   -- world\draw!
 
+  f!
+
   if btnp 5
     lightbuffer\read!
+    lightbuffer\blur!
 
   if lightbuffer.buffer
     lightbuffer\draw!
 
   util = (time! - start) / 16
   UIBar(util, 2, 100, SCREEN_W - 4, 5)\draw!
-  print "Entities: #{#world.entities}", SCREEN_W - 80, 10
+  -- print "Entities: #{#world.entities}", SCREEN_W - 80, 10
 
 
