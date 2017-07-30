@@ -485,6 +485,8 @@ class Map extends Rect
     steps_y = ceil rect.h / TILE_H
 
     for oy=1,steps_y
+      x = rect.pos.x
+
       for ox=1,steps_x
         return true if @collides_pt x,y
         x += TILE_W
