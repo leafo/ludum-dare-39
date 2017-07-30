@@ -466,10 +466,12 @@ class Map extends Rect
       x += mox
       y += moy
 
-      continue if x >= @tiles_width or x < 0
-      continue if y >= @tiles_height or y < 0
+      -- out of vounds
+      wall = if x >= @tiles_width or x < 0 or y >= @tiles_height or y < 0
+        "solid"
+      else
+        @walls[x + y * @tiles_width + 1]
 
-      wall = @walls[x + y * @tiles_width + 1]
       continue unless wall
 
       if wall == "solid"
