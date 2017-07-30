@@ -1,7 +1,10 @@
 -- converts tiled json map to something we can embed into game
 -- encodes into binary string
 
-filename = ...
+filename, var_name = ...
+
+var_name or= "MAP_1"
+
 file = assert io.open filename, "r"
 content = file\read "*a"
 
@@ -31,6 +34,6 @@ if objects
     table.insert map_objects,
       "{ type: '#{object.type}', #{math.floor object.x}, #{math.floor object.y}}"
 
-print "{ width: #{map.width}, objects: {#{table.concat map_objects, ", "}}, #{table.concat(bits, ",")} }"
+print "#{var_name} = { width: #{map.width}, objects: {#{table.concat map_objects, ", "}}, #{table.concat(bits, ",")} }\n"
 
 
