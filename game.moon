@@ -421,7 +421,7 @@ class Player extends Rect
     if @aim_dir and @last_dir
       @aim_dir = @aim_dir\merge_angle @last_dir, 0.2
 
-    @pos += @dir * 2
+    fit_move @, @dir * 2, world
 
     -- @shoot_lock or= every 100, (world) -> @shoot world
     -- @.shoot_lock world
@@ -607,6 +607,9 @@ class World extends Rect
 
   add: (e) =>
     table.insert @entities, e
+
+  collides: (obj) =>
+    @map\collides obj
 
   update: =>
     @viewport\center_on @player.pos
@@ -843,7 +846,7 @@ export TIC = ->
   print table.concat({
     "Entities: #{#world.entities}"
     tostring world.player.pos
-    tostring world.map\collides world.player
+    tostring world\collides world.player
   }, ", "), 0, SCREEN_H - 6
   UIBar(util, 0, SCREEN_H - 15, SCREEN_W, 5)\draw!
 
