@@ -920,7 +920,11 @@ class World extends Rect
 
 
   remove: (to_remove) =>
-    @entities = [e for e in *@entities when e != to_remove]
+    unless @entities_to_remove
+      @entities_to_remove = {}
+
+    @entities_to_remove[to_remove] = true
+
 
   add: (e) =>
     table.insert @entities, e
@@ -943,6 +947,10 @@ class World extends Rect
     @build_collision_grid!
     for entity in *@entities
       entity\update @
+
+    if @entities_to_remove
+      @entities = [e for e in *@entities when not @entities_to_remove[e]]
+      @entities_to_remove = nil
 
   __tostring: =>
     "World()"
