@@ -18,7 +18,7 @@ set_palette = (colors) ->
     poke PAL + i * 3 + 1, g
     poke PAL + i * 3 + 2, b
 
-{:cos, :sin, :floor, :atan2, pi: PI} = math
+{:cos, :sin, :floor, :ceil, :atan2, pi: PI} = math
 
 PAL_GRAD = {
   "210D14"
@@ -164,8 +164,7 @@ class Vector
     a.x * b.x + a.y * b.y
 
   __tostring: (other) =>
-    "Vec(#{@x}, #{@y})"
-
+    "Vec(#{"%.3f"\format @x}, #{"%.3f"\format @y})"
 
 class Rect
   w: 0
@@ -439,6 +438,30 @@ class Map extends Rect
     @w = @tiles_width * TILE_W
     @h = @tiles_width * TILE_H
 
+  collides: (rect) =>
+    {:x, :y} = rect.pos
+    steps_x = ceil rect.w / TILE_W
+    steps_y = ceil rect.h / TILE_H
+
+    for oy=1,steps_y
+      for ox=1,steps_x
+        return true if @collides_pt x,y
+        x += TILE_W
+      y += TILE_H
+
+    false
+
+  -- checks if pt is touching solid tile
+  collides_pt: (x, y) =>
+    x = floor x / TILE_W
+    y = floor y / TILE_H
+
+    -- outside map
+    if x >= @tiles_width or x < 0 or y >= @tiles_height or y < 0
+      true
+
+    @walls[x + y * @tiles_width + 1] and true
+
   -- draw the entire map
   draw: (viewport, lb) =>
     {x: vx, y: vy} = viewport.pos
@@ -517,7 +540,7 @@ class World extends Rect
   new: =>
     super!
 
-    @player = Player 10, 10
+    @player = Player 32, 32
     @viewport = Viewport!
 
     @entities = {
@@ -776,7 +799,11 @@ export TIC = ->
 
   clip!
   util = (time! - start) / 16
-  print "Energy: 0, Entities: #{#world.entities}", 0, SCREEN_H - 6
+  print table.concat({
+    "Entities: #{#world.entities}"
+    tostring world.player.pos
+    tostring world.map\collides world.player
+  }, ", "), 0, SCREEN_H - 6
   UIBar(util, 0, SCREEN_H - 15, SCREEN_W, 5)\draw!
 
 
