@@ -603,8 +603,14 @@ class Viewport extends Rect
   new: =>
     @pos = Vector!
 
+  update: =>
+    if @target_center
+      mid_center = (@center! + @target_center) / 2
+      @pos = mid_center - Vector @w/2, @h/2
+
   center_on: (pos) =>
-    @pos = pos - Vector @w/2, @h/2
+    @target_center = pos
+    -- @pos = pos - Vector @w/2, @h/2
 
   floating_center_on: (pos, max_len=20) =>
     center = @center!
@@ -661,7 +667,7 @@ class World extends Rect
 
   update: =>
     @viewport\floating_center_on @player.pos + @player.aim_dir * 10
-
+    @viewport\update!
 
     for entity in *@entities
       entity\update @
