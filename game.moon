@@ -210,6 +210,7 @@ class Vector
 class Rect
   w: 0
   h: 0
+  collision_type: "box"
 
   new: (x,y,@w,@h)=>
     @pos = Vector x,y
@@ -266,6 +267,7 @@ class Particle extends Rect
   h: 2
   life: 500
   type: "rect"
+  collision_type: "center"
 
   @emit_sparks: (world, origin, dir) =>
     for i=1,5
@@ -335,13 +337,15 @@ class Particle extends Rect
 class Bullet extends Rect
   w: 5
   h: 5
+  collision_type: "center"
 
   new: (pos, @dir) =>
     @pos = pos - Vector @w / 2, @h / 2
 
   update: (world) =>
     @pos += @dir
-    unless world\contains @
+
+    if world\collides @
       world\remove @
       Particle\emit_sparks world, @pos, @dir\normalized!\rotate(PI)
       Particle\emit_explosion world, @pos
@@ -370,7 +374,13 @@ class Player extends Rect
 
   draw_light: (lb, viewport) =>
     p = viewport\apply @pos
-    lb\rect p.x, p.y, @w, @h
+    raius = 3
+    lb\rect(
+      p.x - radius
+      p.y - radius
+      @w + radius*2
+      @h + radius * 2
+    )
 
   draw: (viewport) =>
     center = viewport\apply @center!
@@ -480,6 +490,15 @@ class Map extends Rect
     @h = @tiles_width * TILE_H
 
   collides: (rect) =>
+    switch rect.collision_type
+      when "box"
+        @collides_box  rect
+      when "center"
+        @collides_pt rect\center!\unpack!
+      else
+        error "unknown collision type"
+
+  collides_box: (rect) =>
     {:x, :y} = rect.pos
     steps_x = ceil rect.w / TILE_W
     steps_y = ceil rect.h / TILE_H
@@ -493,6 +512,7 @@ class Map extends Rect
       y += TILE_H
 
     false
+
 
   -- checks if pt is touching solid tile
   collides_pt: (x, y) =>
@@ -539,6 +559,10 @@ class Map extends Rect
         @walls[x + y * @tiles_width + 1]
 
       continue unless wall
+
+      -- to debug map:
+      -- rect tx, ty, TILE_W, TILE_H, (idx % 2) + 10
+      -- do continue
 
       if wall == "solid"
         spr 0, tx, ty
@@ -840,7 +864,6 @@ export TIC = ->
   cls 0
   clip 0, 0, SCREEN_W, VIEW_H
   lightbuffer\draw!
-
   world\draw lightbuffer
 
   clip!
