@@ -299,6 +299,7 @@ class Particle extends Rect
         .light_radius = 10
         .radius = radius
         .type = "circle"
+        .life = 500 * random_normal!
 
   draw_light: (lb, viewport) =>
     light = floor (1 - @p!) * 5
@@ -340,7 +341,6 @@ class Particle extends Rect
       when "circle"
         center = viewport\apply @center!
         r = (@radius or 5) * (1 - @p!)
-        circ center.x, center.y, r + 1, math.max 0, color - 3
         circ center.x, center.y, r, color
 
 class Bullet extends Rect
@@ -413,16 +413,16 @@ class Player extends Rect
 
       dist = 15
 
-      -- draw reticle
-      ab = center + d\rotate(PI/4) * dist
-      ab2 = center + d\rotate(-PI/4) * dist
-      ab3 = center + d\rotate(PI/4 + PI) * dist
-      ab4 = center + d\rotate(-PI/4 + PI) * dist
+      -- -- draw reticle
+      -- ab = center + d\rotate(PI/4) * dist
+      -- ab2 = center + d\rotate(-PI/4) * dist
+      -- ab3 = center + d\rotate(PI/4 + PI) * dist
+      -- ab4 = center + d\rotate(-PI/4 + PI) * dist
 
-      line ab.x, ab.y, ab2.x, ab2.y, 11
-      line ab2.x, ab2.y, ab3.x, ab3.y, 11
-      line ab3.x, ab3.y, ab4.x, ab4.y, 11
-      line ab4.x, ab4.y, ab.x, ab.y, 11
+      -- line ab.x, ab.y, ab2.x, ab2.y, 11
+      -- line ab2.x, ab2.y, ab3.x, ab3.y, 11
+      -- line ab3.x, ab3.y, ab4.x, ab4.y, 11
+      -- line ab4.x, ab4.y, ab.x, ab.y, 11
 
 
   shoot: (world) =>
@@ -606,6 +606,17 @@ class Viewport extends Rect
   center_on: (pos) =>
     @pos = pos - Vector @w/2, @h/2
 
+  floating_center_on: (pos, max_len=20) =>
+    center = @center!
+    -- vector from center to pos
+    dir = pos - center
+    len = dir\len!
+
+    return if len <= max_len
+
+    delta =  dir\normalized! * max_len
+    @center_on pos - delta
+
   -- move the point into viewport space
   apply: (pos) =>
     pos - @pos
@@ -649,7 +660,8 @@ class World extends Rect
     @map\collides obj
 
   update: =>
-    @viewport\center_on @player.pos
+    @viewport\floating_center_on @player.pos + @player.aim_dir * 10
+
 
     for entity in *@entities
       entity\update @
