@@ -268,6 +268,7 @@ class Particle extends Rect
   life: 500
   type: "rect"
   collision_type: "center"
+  light_radius: 0
 
   @emit_sparks: (world, origin, dir) =>
     for i=1,5
@@ -282,12 +283,12 @@ class Particle extends Rect
 
   @emit_explosion: (world, origin) =>
     for i=1,2
-      big = i % 2 == 0
+      big = i % 2 == 1
 
       radius = if big
         math.random 8,14
       else
-        math.random 4,6
+        math.random 6,10
 
       o = origin + Vector(
         (random_normal! - 0.5) * 20
@@ -295,13 +296,20 @@ class Particle extends Rect
       )
 
       world\add with @ o
+        .light_radius = 10
         .radius = radius
         .type = "circle"
 
   draw_light: (lb, viewport) =>
     light = floor (1 - @p!) * 5
     p = viewport\apply @pos
-    lb\rect p.x, p.y, @w, @h, light
+    lb\rect(
+      p.x - @light_radius
+      p.y - @light_radius
+      @w + @light_radius * 2
+      @h + @light_radius * 2
+      light
+    )
 
   new: (@pos, @vel=Vector!, @accel=Vector!) =>
 
@@ -323,7 +331,7 @@ class Particle extends Rect
     math.max 0, math.min 1, (time! - @spawn) / @life
 
   draw: (viewport) =>
-    color = floor (1 - @p!) * 12
+    color = floor math.pow(1 - @p!, 0.8) * 12
 
     switch @type
       when "rect"
@@ -332,6 +340,7 @@ class Particle extends Rect
       when "circle"
         center = viewport\apply @center!
         r = (@radius or 5) * (1 - @p!)
+        circ center.x, center.y, r + 1, math.max 0, color - 3
         circ center.x, center.y, r, color
 
 class Bullet extends Rect
@@ -374,11 +383,11 @@ class Player extends Rect
 
   draw_light: (lb, viewport) =>
     p = viewport\apply @pos
-    raius = 3
+    radius = 3
     lb\rect(
       p.x - radius
       p.y - radius
-      @w + radius*2
+      @w + radius * 2
       @h + radius * 2
     )
 
@@ -572,7 +581,9 @@ class Map extends Rect
       continue unless rot
 
       b = lb\light_for_pos Vector tx + TILE_W / 2, ty + TILE_H / 2
-      continue if b == 0
+      if b == 0
+        spr 0, tx, ty
+        continue
 
       b = math.pow b, 0.4
       levels = #@wall_sprites
