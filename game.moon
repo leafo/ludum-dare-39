@@ -654,6 +654,16 @@ class World extends Rect
     for entity in *@entities
       entity\draw @viewport
 
+    if @shake_frames
+      if @shake_frames == 0
+        poke 0x3FF9, 0
+        poke 0x3FF9 + 1, 0
+        @shake_frames = nil
+      else
+        poke 0x3FF9, math.random -@shake_intensity, @shake_intensity
+        poke 0x3FF9 + 1, math.random -@shake_intensity, @shake_intensity
+        @shake_frames -= 1
+
     -- @viewport\draw!
 
   remove: (to_remove) =>
@@ -665,9 +675,16 @@ class World extends Rect
   collides: (obj) =>
     @map\collides obj
 
+  shake: =>
+    @shake_intensity = 4
+    @shake_frames = 10
+
   update: =>
     @viewport\floating_center_on @player.pos + @player.aim_dir * 10
     @viewport\update!
+
+    -- if btnp 6
+    --   @shake!
 
     for entity in *@entities
       entity\update @
