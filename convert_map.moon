@@ -17,12 +17,20 @@ for layer in *map.layers
     when "objectgroup"
       objects = layer
 
+
 bits = for t in *tiles.data
   if t > 0
     1
   else
     0
 
-print "{ width: #{map.width}, #{table.concat(bits, ",")} }"
+map_objects = {}
+
+if objects
+  for object in *objects.objects
+    table.insert map_objects,
+      "{ type: '#{object.type}', #{math.floor object.x}, #{math.floor object.y}}"
+
+print "{ width: #{map.width}, objects: {#{table.concat map_objects, ", "}}, #{table.concat(bits, ",")} }"
 
 
