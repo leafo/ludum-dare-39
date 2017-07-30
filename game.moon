@@ -1,5 +1,5 @@
 
-DEBUG = true
+DEBUG = false -- hides light map and shows all tiles
 
 instance_of = do
   subclass = (child, parent) ->
@@ -404,6 +404,7 @@ class Bullet extends Rect
     "Bullet(#{@pos}, #{@w}, #{@h})"
 
 class Player extends Rect
+  health: 2
   w: 10
   h: 10
   collidable: true
@@ -460,8 +461,12 @@ class Player extends Rect
       -- line ab3.x, ab3.y, ab4.x, ab4.y, 11
       -- line ab4.x, ab4.y, ab.x, ab.y, 11
 
+  is_dead: =>
+    @health <= 0
 
   shoot: (world) =>
+    return if @is_dead!
+
     sounds.shoot!
     @recoil_frames = 4
     return unless @aim_dir
@@ -474,7 +479,23 @@ class Player extends Rect
     sounds.low_explode!
     world\shake!
 
+  -- hit by bullet or enemy
+  on_hit: (world, e) =>
+    return if @is_dead!
+
+    @stun_dir = (@center! - e\center!)\normalized! * 10
+    e\shake world
+    @stun world
+    @health -= 1
+
+    if @health <= 0
+      Particle\emit_cross_explosion world, @center!
+
   update: (world) =>
+    if @is_dead!
+      world\remove @
+      return
+
     input = Vector\from_input!
 
     @vel = if @stun_frames == 0
@@ -518,9 +539,7 @@ class Player extends Rect
       @shoot world
 
     if e = world\touching_entity @, Enemy
-      @stun_dir = (@center! - e\center!)\normalized! * 10
-      e\shake world
-      @stun world
+      @on_hit world, e
 
 class Enemy extends Rect
   w: 15
@@ -845,7 +864,6 @@ class World extends Rect
         when "enemy"
           @add Enemy x, y
         when "bug"
-          trace "Creating bug"
           @add Bug x, y
 
     @w = @map.w
