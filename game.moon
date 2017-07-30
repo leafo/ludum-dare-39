@@ -197,6 +197,9 @@ class Vector
     rad = a + (b - a) * p
     @@from_radians rad
 
+  flip_x: => @@ -@x, @y
+  flip_y: => @@ @x, -@y
+
   unpack: =>
     @x, @y
 
@@ -413,6 +416,7 @@ class Player extends Rect
   w: 10
   h: 10
   collidable: true
+  stun_frames: 0
 
   new: (...) =>
     super ...
@@ -473,22 +477,48 @@ class Player extends Rect
     origin = @center! + @aim_dir * 8
     world\add Bullet origin, @aim_dir * 5
 
+  stun: (world) =>
+    return if @stun_frames > 0
+    @stun_frames = 15
+    sounds.explode!
+    world\shake!
+
   update: (world) =>
-    @dir = Vector\from_input!
+    input = Vector\from_input!
+
+    @vel = if @stun_frames == 0
+      input * 2
+    else
+      @stun_frames -= 1
+      with (@stun_dir or Vector!) + input
+        @stun_dir = @stun_dir * 0.9
 
     if @recoil_frames
       @recoil_frames -= 1
       @recoil_frames = nil if @recoil_frames == 0
 
-
-    if @dir\nonzero!
-      @last_dir = @dir
-      @aim_dir or= @last_dir
+    if input\nonzero!
+      @last_dir = input
+      @aim_dir or= last_dir
 
     if @aim_dir and @last_dir
       @aim_dir = @aim_dir\merge_angle @last_dir, 0.2
 
-    fit_move @, @dir * 2, world
+    hit_x, hit_y = fit_move @, @vel, world
+
+    -- bounce off walls if we are stunned
+    if @stun_frames > 0
+      if hit_x
+        if @vel\len! > 4
+          world\shake!
+          sounds.explode!
+        @stun_dir = @stun_dir\flip_x!
+
+      if hit_y
+        if @vel\len! > 4
+          world\shake!
+          sounds.explode!
+        @stun_dir = @stun_dir\flip_y!
 
     -- @shoot_lock or= every 100, (world) -> @shoot world
     -- @.shoot_lock world
@@ -497,7 +527,8 @@ class Player extends Rect
       @shoot world
 
     if e = world\touching_entity @, Enemy
-      world\shake!
+      @stun_dir = (@center! - e\center!)\normalized! * 10
+      @stun world
 
 class Enemy extends Rect
   w: 15
@@ -518,7 +549,7 @@ class Enemy extends Rect
     )
 
   draw: (viewport) =>
-    super viewport, 0
+    super viewport, 15
 
   update: =>
 
@@ -1049,7 +1080,7 @@ export TIC = ->
   print table.concat({
     "Entities: #{#world.entities}"
     tostring world.player.pos
-    tostring world\collides world.player
+    tostring world.player.stun_frames
   }, ", "), 0, SCREEN_H - 6
   UIBar(util, 0, SCREEN_H - 15, SCREEN_W, 5)\draw!
 
