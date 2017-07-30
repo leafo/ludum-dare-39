@@ -14,8 +14,10 @@
       "poke4"
       "rect"
       "rectb"
+      "sfx"
       "spr"
       "time"
+      "trace"
     }
   }
 }
