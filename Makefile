@@ -9,8 +9,8 @@ merged.moon: prefix.moon game.moon map2.json
 	moon convert_map.moon map2.json MAP_1 >> merged.moon
 	cat game.moon >> merged.moon
 
-run:
-	moonc -p game.moon | lua -
+run: merged.moon
+	moonc -p merged.moon | lua -
 
 lint: merged.moon
 	moonc lint_config.moon
