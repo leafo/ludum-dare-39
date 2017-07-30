@@ -132,7 +132,7 @@ fit_move = (obj, move, world) ->
 -- implemented as stateless iterator
 grid_ids = do
   hash_pt = (x,y) -> "#{x}.#{y}"
-  (rect, grid_size=40, k=0) ->
+  (rect, k=0, grid_size=40) ->
     x, y, w, h = rect\unpack!
 
     x2 = x + w
@@ -151,7 +151,9 @@ grid_ids = do
     hy = y + floor(k / steps_x)
     has_more = k + 1 < total_steps
 
-    hash_pt(hx, hy), has_more and k + 1 or nil, steps_x, steps_y
+    k + 1, hash_pt(hx, hy)
+
+grid_ids_iter = (rect) -> grid_ids, rect, nil
 
 class Vector
   x: 0
@@ -1016,35 +1018,4 @@ export TIC = ->
     tostring world\collides world.player
   }, ", "), 0, SCREEN_H - 6
   UIBar(util, 0, SCREEN_H - 15, SCREEN_W, 5)\draw!
-
-
---
-print ">> all 4"
-r = Rect(-5,-5, 10, 10)
-print grid_ids r
-print grid_ids r, nil, 1
-print grid_ids r, nil, 2
-print grid_ids r, nil, 3
-
---
-print ">> bottom right"
-r = Rect(0,0, 10, 10)
-print grid_ids r
-
---
-print ">> top two"
-r = Rect(-5,-10, 8, 8)
-print grid_ids r
-print grid_ids r, nil, 1
-
---
-print ">> bigger than"
-r = Rect(5,30,80, 20)
-print grid_ids r
-print grid_ids r, nil, 1
-print grid_ids r, nil, 2
-print grid_ids r, nil, 3
-print grid_ids r, nil, 4
-print grid_ids r, nil, 5
-
 
