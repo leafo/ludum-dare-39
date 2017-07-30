@@ -1,3 +1,18 @@
+
+DEBUG = true
+
+instance_of = do
+  subclass = (child, parent) ->
+    return false unless parent and child
+    return true if child == parent
+    if p = child.__parent
+      subclass p, parent
+    else
+      false
+
+  (obj, cls) ->
+    subclass obj.__class, cls
+
 set_palette = (colors) ->
   n = (v, ...) ->
     return unless v
@@ -565,6 +580,27 @@ class Enemy extends Rect
       @on_die world
       world\remove @
 
+-- bug will move around and charge
+class Bug extends Enemy
+  update: (world, lb) =>
+
+  draw_light: false
+
+  draw: (viewport) =>
+    Rect.draw @, viewport, 10
+
+class ShootBug extends Enemy
+  new: (...) =>
+    super
+
+  update: (world) =>
+
+
+class SprayBug extends Enemy
+  new: (...) =>
+    super
+
+  update: (world) =>
 
 class Map extends Rect
   wall_sprites: {5,4,3,2,1}
@@ -735,7 +771,8 @@ class Map extends Rect
       b += smoothstep 0, 1, @global_brightness
       b = math.max 0, math.min 1, b
 
-      -- b = 1 -- view all tiles
+      if DEBUG
+        b = 1 -- view all tiles
 
       if b == 0
         spr 0, tx, ty
@@ -803,10 +840,13 @@ class World extends Rect
     @map = Map\load_for_tiles MAP_1
 
     for object in *@map.objects
+      {x, y} = object
       switch object.type
         when "enemy"
-          trace "Adding enemy: #{object[1]} #{object[2]}"
-          @add Enemy object[1], object[2]
+          @add Enemy x, y
+        when "bug"
+          trace "Creating bug"
+          @add Bug x, y
 
     @w = @map.w
     @h = @map.h
@@ -854,7 +894,7 @@ class World extends Rect
       continue unless cell
       for other_e in *cell
         continue if other_e == e
-        if cls and cls != other_e.__class
+        if cls and not instance_of other_e, cls
           continue
 
         if e\touches other_e
@@ -1106,7 +1146,10 @@ export TIC = ->
 
   cls 0
   clip 0, 0, SCREEN_W, VIEW_H
-  lightbuffer\draw!
+
+  unless DEBUG
+    lightbuffer\draw!
+
   world\draw lightbuffer
 
   clip!
@@ -1117,4 +1160,5 @@ export TIC = ->
     tostring world.player.stun_frames
   }, ", "), 0, SCREEN_H - 6
   UIBar(util, 0, SCREEN_H - 15, SCREEN_W, 5)\draw!
+
 

@@ -36,6 +36,17 @@
                  "width":0,
                  "x":325,
                  "y":107.666666666667
+                }, 
+                {
+                 "height":0,
+                 "id":5,
+                 "name":"bug",
+                 "rotation":0,
+                 "type":"bug",
+                 "visible":true,
+                 "width":0,
+                 "x":119,
+                 "y":79.5
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -43,7 +54,7 @@
          "x":0,
          "y":0
         }],
- "nextobjectid":5,
+ "nextobjectid":6,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.0.2",
