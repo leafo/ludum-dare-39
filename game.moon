@@ -253,10 +253,10 @@ class Particle extends Rect
         .radius = radius
         .type = "circle"
 
-  draw_light: (lb) =>
-    x,y,w,h = @unpack!
+  draw_light: (lb, viewport) =>
     light = math.floor (1 - @p!) * 5
-    lb\rect x,y,w,h, light
+    p = viewport\apply @pos
+    lb\rect p.x, p.y, @w, @h, light
 
   new: (@pos, @vel=Vector!, @accel=Vector!) =>
 
@@ -303,8 +303,9 @@ class Bullet extends Rect
       Particle\emit_sparks world, @pos, @dir\normalized!\rotate(PI)
       Particle\emit_explosion world, @pos
 
-  draw_light: (lb) =>
-    lb\rect @unpack!
+  draw_light: (lb, viewport) =>
+    p = viewport\apply @pos
+    lb\rect p.x, p.y, @w, @h
 
   draw: (viewport) =>
     color = 15
@@ -324,8 +325,9 @@ class Player extends Rect
     super ...
     @aim_dir = Vector 1, 0
 
-  draw_light: (lb) =>
-    lb\rect @unpack!
+  draw_light: (lb, viewport) =>
+    p = viewport\apply @pos
+    lb\rect p.x, p.y, @w, @h
 
   draw: (viewport) =>
     center = viewport\apply @center!
@@ -478,7 +480,8 @@ class Viewport extends Rect
     pos - @pos
 
   draw: =>
-    rectb @pos.x, @pos.y, @w, @h, 15
+    p = @apply @pos
+    rectb p.x, p.y, @w, @h, 15
 
 class World extends Rect
   new: =>
@@ -676,7 +679,7 @@ export TIC = ->
 
   for e in *world.entities
     if e.draw_light
-      e\draw_light lightbuffer
+      e\draw_light lightbuffer, world.viewport
 
   lightbuffer\read!
   f!
