@@ -689,6 +689,7 @@ class World extends Rect
 
     @w = @map.w
     @h = @map.h
+    music 0
 
   draw: (lb) =>
     @map\draw @viewport, lb
