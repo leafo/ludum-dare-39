@@ -20,6 +20,11 @@ set_palette = (colors) ->
 
 {:cos, :sin, :floor, :ceil, :atan2, pi: PI} = math
 
+sounds = {
+  explode: -> sfx 0, "C-4", 16, 3
+  shoot: -> sfx 1, "C-4", 16, 3
+}
+
 PAL_GRAD = {
   "210D14"
   "2D1C20"
@@ -282,6 +287,8 @@ class Particle extends Rect
       world\add @ origin, dir, accel
 
   @emit_explosion: (world, origin) =>
+    sounds.explode!
+
     for i=1,2
       big = i % 2 == 1
 
@@ -430,6 +437,7 @@ class Player extends Rect
 
 
   shoot: (world) =>
+    sounds.shoot!
     @recoil_frames = 4
     return unless @aim_dir
     origin = @center! + @aim_dir * 8
@@ -612,7 +620,7 @@ class Map extends Rect
       continue unless rot
 
       b = lb\light_for_pos Vector tx + TILE_W / 2, ty + TILE_H / 2
-      b = 1
+      -- b = 1
       if b == 0
         spr 0, tx, ty
         continue
