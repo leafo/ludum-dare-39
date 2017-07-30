@@ -393,7 +393,12 @@ class Bullet extends Rect
   update: (world) =>
     @pos += @dir
 
-    if world\collides @
+    is_hit = world\collides @
+    if enemy = not is_hit and world\touching_entity @, Enemy
+      enemy\on_hit word, @
+      is_hit = true
+
+    if is_hit
       world\remove @
       Particle\emit_sparks world, @pos, @dir\normalized!\rotate(PI)
       Particle\emit_explosion world, @pos
@@ -491,7 +496,7 @@ class Player extends Rect
     else
       @stun_frames -= 1
       with (@stun_dir or Vector!) + input
-        @stun_dir = @stun_dir * 0.9
+        @stun_dir = @stun_dir * 0.85
 
     if @recoil_frames
       @recoil_frames -= 1
@@ -535,6 +540,7 @@ class Enemy extends Rect
   h: 15
   light_radius: 10
   collidable: true
+  shake_frames: 0
 
   draw_light: (lb, viewport) =>
     lr = @light_radius
@@ -549,9 +555,18 @@ class Enemy extends Rect
     )
 
   draw: (viewport) =>
-    super viewport, 15
+    pos = viewport\apply @pos
+    if @shake_frames > 0
+      pos += Vector math.random(-4, 4), math.random(-4, 4)
+
+    rect pos.x, pos.y, @w, @h, 15
+
+  on_hit: (world, bullet) =>
+    @shake_frames = 10
 
   update: =>
+    if @shake_frames > 0
+      @shake_frames -= 1
 
 class Map extends Rect
   wall_sprites: {5,4,3,2,1}
