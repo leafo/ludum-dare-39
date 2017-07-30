@@ -401,12 +401,16 @@ class Player extends Rect
 
     -- draw gun
     if d = @aim_dir
-      pos = center
+      gun_root = center
+      if @recoil_frames
+        gun_root -= @aim_dir * @recoil_frames
+
+      pos = gun_root
       for i=1,4
         circ pos.x, pos.y, 3, 2
         pos += d * 2
 
-      pos = center
+      pos = gun_root
       for i=1,4
         circ pos.x, pos.y, 2, 15
         pos += d * 2
@@ -426,12 +430,18 @@ class Player extends Rect
 
 
   shoot: (world) =>
+    @recoil_frames = 4
     return unless @aim_dir
     origin = @center! + @aim_dir * 8
     world\add Bullet origin, @aim_dir * 5
 
   update: (world) =>
     @dir = Vector\from_input!
+
+    if @recoil_frames
+      @recoil_frames -= 1
+      @recoil_frames = nil if @recoil_frames == 0
+
 
     if @dir\nonzero!
       @last_dir = @dir
