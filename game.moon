@@ -632,8 +632,8 @@ class SprayBug extends Enemy
 class Map extends Rect
   wall_sprites: {5,4,3,2,1}
   corner_sprites: { 21, 20, 19, 18, 17 }
-  base_sprites: {33}
-  base_corner_sprites: {49}
+  base_sprites: {35, 34, 33}
+  base_corner_sprites: {51, 50, 49}
 
   global_brightness: 0
 
@@ -665,9 +665,6 @@ class Map extends Rect
       x = (tile - 1) % tiles.width
       y = floor (tile - 1) / tiles.width
       current = get_tile x, y
-
-      if is_base current
-        trace "got base: #{current}"
 
       dir = if is_solid(current) or is_base(current)
         open_below = is_floor get_tile x, y + 1
