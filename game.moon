@@ -57,6 +57,9 @@ PAL_REG = {
   "DAD45E"
 }
 
+TILE_W = 8
+TILE_H = 8
+
 SCREEN_W = 240
 SCREEN_H = 136
 VIEW_H = SCREEN_H - 15
@@ -387,7 +390,7 @@ class Player extends Rect
       @shoot world
 
 class Map extends Rect
-  wall_sprites: {1,2,3,4}
+  wall_sprites: {5,4,3,2,1}
   rotations: {
     top: 2
     bottom: 0
@@ -433,11 +436,11 @@ class Map extends Rect
     @tiles_width = opts.width
     @tiles_height = #@walls / opts.width
 
-    @w = @tiles_width * 8
-    @h = @tiles_width * 8
+    @w = @tiles_width * TILE_W
+    @h = @tiles_width * TILE_H
 
   -- draw the entire map
-  draw: (viewport, ox=0, oy=0, light_buffer) =>
+  draw: (viewport, lb) =>
     {x: vx, y: vy} = viewport.pos
 
     for idx, wall in ipairs @walls
@@ -447,7 +450,7 @@ class Map extends Rect
       x = (idx - 1) % @tiles_width
       y = math.floor (idx - 1) / @tiles_width
 
-      tx, ty = ox + x * 8, oy + y * 8
+      tx, ty = x * TILE_W, y * TILE_H
       tx -= vx
       ty -= vy
 
@@ -458,8 +461,14 @@ class Map extends Rect
       rot = @rotations[wall]
       continue unless rot
 
+      b = lb\light_for_pos Vector tx + TILE_W / 2, ty + TILE_H / 2
+      continue if b == 0
+
+      b = math.pow b, 0.4
+      sprite_idx = math.floor(b * #@wall_sprites) + 1
+
       spr(
-        1
+        @wall_sprites[sprite_idx]
         tx, ty
         -1, 1, 0
         rot
@@ -501,8 +510,8 @@ class World extends Rect
     @w = @map.w
     @h = @map.h
 
-  draw: =>
-    @map\draw @viewport
+  draw: (lb) =>
+    @map\draw @viewport, lb
     for entity in *@entities
       entity\draw @viewport
 
@@ -542,6 +551,20 @@ class LightBuffer
   new: =>
     @w = @res
     @h = floor (SCREEN_H / SCREEN_W * @res) + 1
+
+  light_for_pos: (pos) =>
+    return unless @buffer
+
+    cx, cy = pos\unpack!
+    cx += @ox
+    cy += @oy
+
+    x = floor cx / SCREEN_W * @w + 0.5
+    y = floor cy / SCREEN_H * @h + 0.5
+
+    idx = x + y * @w
+    b = @buffer[idx + 1] or 0
+    floor(b + 0.5) / 15 --> move it in p space
 
   rect: (x, y, w, h, b=8) =>
     return nil unless @buffer
@@ -728,11 +751,12 @@ export TIC = ->
   clip 0, 0, SCREEN_W, VIEW_H
   lightbuffer\draw!
 
-  world\draw!
+  world\draw lightbuffer
   lightbuffer\draw true
 
   clip!
   util = (time! - start) / 16
   print "Energy: 0, Entities: #{#world.entities}", 0, SCREEN_H - 6
   UIBar(util, 0, SCREEN_H - 15, SCREEN_W, 5)\draw!
+
 
