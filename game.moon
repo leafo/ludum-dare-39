@@ -632,6 +632,8 @@ class SprayBug extends Enemy
 class Map extends Rect
   wall_sprites: {5,4,3,2,1}
   corner_sprites: { 21, 20, 19, 18, 17 }
+  base_sprites: {33}
+  base_corner_sprites: {49}
 
   global_brightness: 0
 
@@ -650,8 +652,9 @@ class Map extends Rect
   @load_for_tiles: (tiles) =>
     assert tiles.width, "missing width for tileset"
 
-    is_solid = (i) -> i != 0
-    is_floor = (i) -> not is_solid i
+    is_solid = (i) -> i == 1 or not i
+    is_base = (i) -> i == 2
+    is_floor = (i) -> i == 0
 
     -- top left at 0, 0
     get_tile = (x, y) -> tiles[x + y * tiles.width + 1]
@@ -663,7 +666,10 @@ class Map extends Rect
       y = floor (tile - 1) / tiles.width
       current = get_tile x, y
 
-      if is_solid current
+      if is_base current
+        trace "got base: #{current}"
+
+      dir = if is_solid(current) or is_base(current)
         open_below = is_floor get_tile x, y + 1
         open_above = is_floor get_tile x, y - 1
         open_left = is_floor get_tile x - 1, y
@@ -688,7 +694,11 @@ class Map extends Rect
           "l"
         elseif open_right
           "r"
-        else "solid"
+
+      if is_solid current
+        dir or "solid"
+      elseif is_base(current) and dir
+        "_#{dir}"
       else
         false -- no tile here
 
@@ -738,7 +748,11 @@ class Map extends Rect
     if x >= @tiles_width or x < 0 or y >= @tiles_height or y < 0
       true
 
-    @walls[x + y * @tiles_width + 1] and true
+    tile = @walls[x + y * @tiles_width + 1]
+    if tile
+      tile\sub(1,1) != "_"
+    else
+      false
 
   flash: (amount=1.0) =>
     @global_brightness = amount
@@ -791,6 +805,10 @@ class Map extends Rect
         spr 0, tx, ty
         continue
 
+      is_base = wall\sub(1,1) == "_"
+      wall = if is_base
+        wall\sub 2,-1
+
       rot = @rotations[wall]
       continue unless rot
 
@@ -807,7 +825,11 @@ class Map extends Rect
 
       b = math.pow b, 0.4
 
-      sprites = #wall == 2 and @corner_sprites or @wall_sprites
+      sprites = if is_base
+        #wall == 2 and @base_corner_sprites or @base_sprites
+      else
+        #wall == 2 and @corner_sprites or @wall_sprites
+
       levels = #sprites
       sprite_idx = math.min levels, floor(b * levels) + 1
 
@@ -867,7 +889,6 @@ class World extends Rect
     }
 
     @map = Map\load_for_tiles MAP_1
-
     for object in *@map.objects
       {x, y} = object
       switch object.type
@@ -875,6 +896,9 @@ class World extends Rect
           @add Enemy x, y
         when "bug"
           @add Bug x, y
+        when "player"
+          @player.pos = Vector x, y
+
 
     @w = @map.w
     @h = @map.h
@@ -1284,6 +1308,6 @@ class Game extends Screen
     }, ", "), 0, SCREEN_H - 6
     UIBar(util, 0, SCREEN_H - 15, SCREEN_W, 5)\draw!
 
--- export TIC = Game!\tic
-export TIC = Title!\tic
+export TIC = Game!\tic
+-- export TIC = Title!\tic
 

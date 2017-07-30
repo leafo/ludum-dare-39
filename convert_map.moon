@@ -21,9 +21,9 @@ for layer in *map.layers
       objects = layer
 
 
-bits = for t in *tiles.data
+tile_ids = for t in *tiles.data
   if t > 0
-    1
+    t - 1
   else
     0
 
@@ -34,6 +34,6 @@ if objects
     table.insert map_objects,
       "{ type: '#{object.type}', #{math.floor object.x}, #{math.floor object.y}}"
 
-print "#{var_name} = { width: #{map.width}, objects: {#{table.concat map_objects, ", "}}, #{table.concat(bits, ",")} }\n"
+print "#{var_name} = { width: #{map.width}, objects: {#{table.concat map_objects, ", "}}, #{table.concat(tile_ids, ",")} }\n"
 
 
