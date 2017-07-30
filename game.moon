@@ -33,7 +33,7 @@ sounds = {
   shoot: -> sfx 1, "C-4", 16, 3
 }
 
-local Vector, Enemy, GameOver
+local Vector, Enemy, GameOver, Game, Title
 
 -- call fn every ms
 every = (ms, fn) ->
@@ -1181,10 +1181,19 @@ class Screen
     @update()
 
 class GameOver extends Screen
+  on_load: =>
+    @frame = 0
+
   update: =>
     cls 0
     print "You have died, sorry!", 10, 10
     print "Please try again!", 10, 20
+
+    @frame += 1
+    if @frame > 40
+      if btnp 4
+        export TIC = Title!\tic
+
 
 class Title extends Screen
   on_load: =>
@@ -1205,6 +1214,10 @@ class Title extends Screen
 
   update: =>
     @frame += 1
+
+    if @frame > 40
+      if btnp 4
+        export TIC = Game!\tic
 
     cls 0
 
