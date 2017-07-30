@@ -69,7 +69,7 @@ SCREEN_W = 240
 SCREEN_H = 136
 VIEW_H = SCREEN_H - 15
 
-local Vector
+local Vector, Enemy
 
 -- call fn every ms
 every = (ms, fn) ->
@@ -130,9 +130,9 @@ fit_move = (obj, move, world) ->
 
 -- gets the buckets that this rect hits in the grid
 -- implemented as stateless iterator
-grid_ids = do
+grid_hash_iter = do
   hash_pt = (x,y) -> "#{x}.#{y}"
-  (rect, k=0, grid_size=40) ->
+  grid_hashes = (rect, k=0, grid_size=40) ->
     x, y, w, h = rect\unpack!
 
     x2 = x + w
@@ -153,7 +153,7 @@ grid_ids = do
 
     k + 1, hash_pt(hx, hy)
 
-grid_ids_iter = (rect) -> grid_ids, rect, nil
+  (rect) -> grid_hashes, rect, nil
 
 class Vector
   x: 0
@@ -412,6 +412,7 @@ class Bullet extends Rect
 class Player extends Rect
   w: 10
   h: 10
+  collidable: true
 
   new: (...) =>
     super ...
@@ -495,10 +496,14 @@ class Player extends Rect
     if btnp 4
       @shoot world
 
+    if e = world\touching_entity @, Enemy
+      world\shake!
+
 class Enemy extends Rect
   w: 15
   h: 15
   light_radius: 10
+  collidable: true
 
   draw_light: (lb, viewport) =>
     lr = @light_radius
@@ -516,7 +521,6 @@ class Enemy extends Rect
     super viewport, 0
 
   update: =>
-
 
 class Map extends Rect
   wall_sprites: {5,4,3,2,1}
@@ -761,8 +765,37 @@ class World extends Rect
 
     -- @viewport\draw!
 
-  touching_entities: (e) =>
-    -- build the grid if it doesn't exist
+  build_collision_grid: =>
+    @collision_grid = nil
+    for e in *@entities
+      continue unless e.collidable
+      for _, bucket in grid_hash_iter e
+        unless @collision_grid
+          @collision_grid = {}
+
+        t = @collision_grid[bucket]
+        unless t
+          t = {}
+          @collision_grid[bucket] = t
+
+        table.insert t, e
+
+    @collision_grid
+
+  touching_entity: (e, cls=nil) =>
+    return unless @collision_grid
+
+    for _, bucket in grid_hash_iter e
+      cell = @collision_grid[bucket]
+      continue unless cell
+      for other_e in *cell
+        continue if other_e == e
+        if cls and cls != other_e.__class
+          continue
+
+        if e\touches other_e
+          return other_e
+
 
   remove: (to_remove) =>
     @entities = [e for e in *@entities when e != to_remove]
@@ -784,6 +817,7 @@ class World extends Rect
     -- if btnp 6
     --   @shake!
 
+    @build_collision_grid!
     for entity in *@entities
       entity\update @
 
