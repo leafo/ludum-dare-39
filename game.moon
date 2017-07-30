@@ -64,6 +64,8 @@ SCREEN_W = 240
 SCREEN_H = 136
 VIEW_H = SCREEN_H - 15
 
+local Vector
+
 -- call fn every ms
 every = (ms, fn) ->
   local start
@@ -76,10 +78,49 @@ every = (ms, fn) ->
       start += ms
       fn ...
 
+round = (v) -> floor v + 0.5
+
 random_normal = do
   r = math.random
   ->
     (r! + r! + r! + r! + r! + r! + r! + r! + r! + r! + r! + r!) / 12
+
+-- moves object right up until edge of collision
+fit_move = (obj, move, world) ->
+  if world\collides obj
+    trace "object(#{obj}) is stuck"
+    return
+
+  start = obj.pos
+  obj.pos += move
+
+  -- was able to move
+  return unless world\collides obj
+
+  -- reset, move piecewise
+  obj.pos = start
+
+  hit_x, hit_y = false, false
+
+  if move.x != 0
+    obj.pos += Vector move.x, 0
+    if world\collides obj
+      hit_x = true
+      nudge_x = if move.x > 0 then -1 else 1
+      obj.pos.x = round obj.pos.x
+      while world\collides obj
+        obj.pos.x += nudge_x
+
+  if move.y != 0
+    obj.pos += Vector 0, move.y
+    if world\collides obj
+      hit_y = true
+      nudge_y = if move.y > 0 then -1 else 1
+      obj.pos.y = round obj.pos.y
+      while world\collides obj
+        obj.pos.y += nudge_y
+
+  hit_x, hit_y
 
 class Vector
   x: 0
