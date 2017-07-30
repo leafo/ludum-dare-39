@@ -535,7 +535,9 @@ class LightBuffer
   SCREEN = 0
   LINE_WIDTH = SCREEN_W /2
 
-  res: 30 -- number of vertical lines
+  res: 20 -- number of vertical lines
+  ox: 0
+  oy: 0
 
   new: =>
     @w = @res
@@ -545,6 +547,9 @@ class LightBuffer
     return nil unless @buffer
     scalex = @w / SCREEN_W
     scaley = @h / SCREEN_H
+
+    x += @ox
+    y += @oy
 
     lx = x*scalex
     ly = y*scaley
@@ -582,8 +587,16 @@ class LightBuffer
           table.insert @buffer, b
 
   -- write the buffer back
-  write: =>
+  write: (viewport) =>
     return nil unless @buffer
+
+    cell_w = SCREEN_W / @w
+    cell_h = SCREEN_H / @h
+
+    -- get the hanging amount
+    {x: vx, y: vy} = viewport.pos
+    @ox = vx - math.floor(vx / cell_w) * cell_w
+    @oy = vy - math.floor(vy / cell_h) * cell_h
 
     k = 1
     for y=1,@h
@@ -639,12 +652,16 @@ class LightBuffer
     -- this is fractional
     cell_w = SCREEN_W / @w
     cell_h = SCREEN_H / @h
+    origin_x = -@ox
+    origin_y = -@oy
 
     if debug
       cell_w = 1
       cell_h = 1
+      origin_x = 0
+      origin_y = 0
 
-    tx, ty = 0,0
+    tx, ty = origin_x, origin_y
     for k=1,@w*@h
       c = floor @buffer[k]
 
@@ -669,7 +686,7 @@ class LightBuffer
 
       -- increment position
       if k % @w == 0
-        tx = 0
+        tx = origin_x
         ty += cell_h
       else
         tx += cell_w
@@ -698,7 +715,7 @@ export TIC = ->
   world\update!
 
   cls 0
-  lightbuffer\write!
+  lightbuffer\write world.viewport
 
   for e in *world.entities
     if e.draw_light
