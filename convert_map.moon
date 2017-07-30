@@ -6,15 +6,23 @@ file = assert io.open filename, "r"
 content = file\read "*a"
 
 json = require("cjson")
-object = json.decode content
-layer = assert object.layers[1], "missing layer"
+map = json.decode content
+-- layer = assert object.layers[1], "missing layer"
 
-bits = for t in *layer.data
+local tiles, objects
+for layer in *map.layers
+  switch layer.type
+    when "tilelayer"
+      tiles = layer
+    when "objectgroup"
+      objects = layer
+
+bits = for t in *tiles.data
   if t > 0
     1
   else
     0
 
-print "{ width: #{object.width}, #{table.concat(bits, ",")} }"
+print "{ width: #{map.width}, #{table.concat(bits, ",")} }"
 
 
