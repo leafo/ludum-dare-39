@@ -31,6 +31,8 @@ sounds = {
   explode: -> sfx 0, "C-4", 16, 3
   low_explode: -> sfx 0, "C-3", 13, 3
   shoot: -> sfx 1, "C-4", 16, 3
+  game_start: -> sfx 5, "C-5", 32, 3
+  game_over: -> sfx 6, "C-5", 32, 3
 }
 
 local Vector, Enemy, GameOver, Game, Title
@@ -481,7 +483,8 @@ class Player extends Rect
 
   on_die: (world) =>
     Particle\emit_cross_explosion world, @center!
-    world\set_timeout 2, ->
+    world\set_timeout 1.5, ->
+      sounds.game_over!
       export TIC = GameOver\tic
 
   -- hit by bullet or enemy
@@ -1217,6 +1220,7 @@ class Title extends Screen
 
     if @frame > 40
       if btnp 4
+        sounds.game_start!
         export TIC = Game!\tic
 
     cls 0
