@@ -1187,6 +1187,36 @@ class GameOver extends Screen
     print "Please try again!", 10, 20
 
 class Title extends Screen
+  on_load: =>
+    super!
+    @frame = 0
+
+  -- create vector field
+  draw_grid: =>
+    size = 20
+    width = floor(SCREEN_W / size) + 1
+    height = floor(SCREEN_H / size) + 1
+
+    x, y = 0, 0
+    t = time! / 200
+    vectors = [Vector(x * size + 4 * math.sin(t* 1.1 + 2 + y), y * size + 4 * math.cos(t * 0.9 + 4 + x)) for x=0,width-1 for y=0,width-1]
+    for v in *vectors
+      circ v.x, v.y, 2, 2
+
+  update: =>
+    @frame += 1
+
+    cls 0
+
+    @draw_grid!
+
+    print "X-Moon 2: Dark Moon", 16, 9, 15, false, 2
+    print "A game of tactical espionage action", 22, 24, 7
+
+    if math.floor(@frame / 30) % 2 == 0
+      print "Press button 1 to begin", 49, 115
+
+    spr 128, 83, 36, 7, 1, 0, 0, 8, 8
 
 class Game extends Screen
   loaded: false
@@ -1237,5 +1267,6 @@ class Game extends Screen
     }, ", "), 0, SCREEN_H - 6
     UIBar(util, 0, SCREEN_H - 15, SCREEN_W, 5)\draw!
 
-export TIC = Game!\tic
+-- export TIC = Game!\tic
+export TIC = Title!\tic
 
