@@ -22,6 +22,7 @@ set_palette = (colors) ->
 
 sounds = {
   explode: -> sfx 0, "C-4", 16, 3
+  low_explode: -> sfx 0, "C-3", 13, 3
   shoot: -> sfx 1, "C-4", 16, 3
 }
 
@@ -485,7 +486,7 @@ class Player extends Rect
   stun: (world) =>
     return if @stun_frames > 0
     @stun_frames = 15
-    sounds.explode!
+    sounds.low_explode!
     world\shake!
 
   update: (world) =>
@@ -533,6 +534,7 @@ class Player extends Rect
 
     if e = world\touching_entity @, Enemy
       @stun_dir = (@center! - e\center!)\normalized! * 10
+      e\shake world
       @stun world
 
 class Enemy extends Rect
@@ -541,6 +543,7 @@ class Enemy extends Rect
   light_radius: 10
   collidable: true
   shake_frames: 0
+  flash_frames: 0
 
   draw_light: (lb, viewport) =>
     lr = @light_radius
@@ -556,13 +559,27 @@ class Enemy extends Rect
 
   draw: (viewport) =>
     pos = viewport\apply @pos
-    if @shake_frames > 0
-      pos += Vector math.random(-4, 4), math.random(-4, 4)
+    shake_offset = if @shake_frames > 0
+      Vector math.random(-4, 4), math.random(-4, 4)
 
-    rect pos.x, pos.y, @w, @h, 15
+    pos += shake_offset if shake_offset
+
+    rect pos.x, pos.y, @w, @h, 0
+
+    if @flash_frames > 0
+      r = @flash_frames
+      c = viewport\apply @center!
+      c += shake_offset if shake_offset
+
+      rectb c.x - r, c.y - r, r*2, r*2, 15
+      @flash_frames -= 1
+
+  shake: =>
+    @shake_frames = 10
+    @flash_frames = ceil 4 + @w / 2
 
   on_hit: (world, bullet) =>
-    @shake_frames = 10
+    @shake!
 
   update: =>
     if @shake_frames > 0
