@@ -257,7 +257,7 @@ class Particle extends Rect
         .type = "circle"
 
   draw_light: (lb, viewport) =>
-    light = math.floor (1 - @p!) * 5
+    light = floor (1 - @p!) * 5
     p = viewport\apply @pos
     lb\rect p.x, p.y, @w, @h, light
 
@@ -281,7 +281,7 @@ class Particle extends Rect
     math.max 0, math.min 1, (time! - @spawn) / @life
 
   draw: (viewport) =>
-    color = math.floor (1 - @p!) * 12
+    color = floor (1 - @p!) * 12
 
     switch @type
       when "rect"
@@ -411,7 +411,7 @@ class Map extends Rect
     -- geometry
     arranged = for tile in ipairs tiles
       x = (tile - 1) % tiles.width
-      y = math.floor (tile - 1) / tiles.width
+      y = floor (tile - 1) / tiles.width
       current = get_tile x, y
 
       if is_solid current
@@ -443,12 +443,66 @@ class Map extends Rect
   draw: (viewport, lb) =>
     {x: vx, y: vy} = viewport.pos
 
+    -- for all tiles that fit into the screen
+    vp_tiles_x = floor(viewport.w / TILE_H) + 1
+    vp_tiles_y = floor(viewport.h / TILE_W) + 1
+    vp_tiles = vp_tiles_x * vp_tiles_y
+
+    origin_x = vx % TILE_W
+    origin_y = vy % TILE_H
+
+    -- how far are we offset in map
+    mox = floor vx / TILE_W
+    moy = floor vy / TILE_H
+
+    for idx=0,vp_tiles-1
+      -- x,y is tile coordinate in screen space
+      x = idx % vp_tiles_x
+      y = floor idx / vp_tiles_x
+
+      tx = x*TILE_W - origin_x
+      ty = y*TILE_H - origin_y
+
+      x += mox
+      y += moy
+
+      continue if x >= @tiles_width or x < 0
+      continue if y >= @tiles_height or y < 0
+
+      wall = @walls[x + y * @tiles_width + 1]
+      continue unless wall
+
+      if wall == "solid"
+        spr 0, tx, ty
+        continue
+
+      rot = @rotations[wall]
+      continue unless rot
+
+      b = lb\light_for_pos Vector tx + TILE_W / 2, ty + TILE_H / 2
+      continue if b == 0
+
+      b = math.pow b, 0.4
+      levels = #@wall_sprites
+      sprite_idx = math.min levels, floor(b * levels) + 1
+
+      spr(
+        @wall_sprites[sprite_idx]
+        tx, ty
+        -1, 1, 0
+        rot
+      )
+
+  -- draws every tile slowly, good for debugging
+  draw_old: (viewport, lb) =>
+    {x: vx, y: vy} = viewport.pos
+
     for idx, wall in ipairs @walls
       continue unless wall
       -- continue if wall == "solid"
 
       x = (idx - 1) % @tiles_width
-      y = math.floor (idx - 1) / @tiles_width
+      y = floor (idx - 1) / @tiles_width
 
       tx, ty = x * TILE_W, y * TILE_H
       tx -= vx
@@ -465,7 +519,8 @@ class Map extends Rect
       continue if b == 0
 
       b = math.pow b, 0.4
-      sprite_idx = math.floor(b * #@wall_sprites) + 1
+      levels = #@wall_sprites
+      sprite_idx = math.min levels, floor(b * levels) + 1
 
       spr(
         @wall_sprites[sprite_idx]
@@ -515,7 +570,7 @@ class World extends Rect
     for entity in *@entities
       entity\draw @viewport
 
-    @viewport\draw!
+    -- @viewport\draw!
 
   remove: (to_remove) =>
     @entities = [e for e in *@entities when e != to_remove]
@@ -618,8 +673,8 @@ class LightBuffer
 
     -- get the hanging amount
     {x: vx, y: vy} = viewport.pos
-    @ox = vx - math.floor(vx / cell_w) * cell_w
-    @oy = vy - math.floor(vy / cell_h) * cell_h
+    @ox = vx % cell_w
+    @oy = vy % cell_h
 
     k = 1
     for y=1,@h
@@ -752,7 +807,6 @@ export TIC = ->
   lightbuffer\draw!
 
   world\draw lightbuffer
-  lightbuffer\draw true
 
   clip!
   util = (time! - start) / 16
