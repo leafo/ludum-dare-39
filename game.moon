@@ -396,7 +396,7 @@ class Bullet extends Rect
 
     is_hit = world\collides @
     if enemy = not is_hit and world\touching_entity @, Enemy
-      enemy\on_hit word, @
+      enemy\on_hit world, @
       is_hit = true
 
     if is_hit
@@ -505,7 +505,7 @@ class Player extends Rect
 
     if input\nonzero!
       @last_dir = input
-      @aim_dir or= last_dir
+      @aim_dir or= @last_dir
 
     if @aim_dir and @last_dir
       @aim_dir = @aim_dir\merge_angle @last_dir, 0.2
@@ -580,6 +580,7 @@ class Enemy extends Rect
 
   on_hit: (world, bullet) =>
     @shake!
+    world.map\flash!
 
   update: =>
     if @shake_frames > 0
@@ -587,7 +588,9 @@ class Enemy extends Rect
 
 class Map extends Rect
   wall_sprites: {5,4,3,2,1}
-  corner_sprites: { 21, 20, 19, 28, 17 }
+  corner_sprites: { 21, 20, 19, 18, 17 }
+
+  global_brightness: 0
 
   rotations: {
     b: 0
@@ -692,6 +695,14 @@ class Map extends Rect
 
     @walls[x + y * @tiles_width + 1] and true
 
+  flash: (amount=1.0) =>
+    @global_brightness = amount
+
+  update: =>
+    if @global_brightness > 0
+      @global_brightness -= 0.07
+      @global_brightness = 0 if @global_brightness < 0
+
   -- draw the entire map
   draw: (viewport, lb) =>
     {x: vx, y: vy} = viewport.pos
@@ -739,7 +750,11 @@ class Map extends Rect
       continue unless rot
 
       b = lb\light_for_pos Vector tx + TILE_W / 2, ty + TILE_H / 2
-      -- b = 1
+      b += @global_brightness
+      b = math.max 0, math.min 1, b
+
+      -- b = 1 -- view all tiles
+
       if b == 0
         spr 0, tx, ty
         continue
@@ -876,6 +891,7 @@ class World extends Rect
   update: =>
     @viewport\floating_center_on @player.pos + @player.aim_dir * 10
     @viewport\update!
+    @map\update!
 
     -- if btnp 6
     --   @shake!
