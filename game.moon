@@ -255,6 +255,9 @@ class Rect
   center: =>
     @pos + Vector @w/2, @h/2
 
+  center_on: (pos) =>
+    @pos = pos - Vector @w/2, @h/2
+
 class UIBar extends Rect
   p: 0
 
@@ -404,6 +407,37 @@ class Bullet extends Rect
 
   __tostring: =>
     "Bullet(#{@pos}, #{@w}, #{@h})"
+
+
+class Base extends Rect
+  w: 48
+  h: 48
+
+  new: (x, y) =>
+    @center_on Vector x,y
+
+  draw: (viewport) =>
+    return unless @active
+
+    p = viewport\apply @center!
+    r = @w/2 * ((@active_frame / 4) % 10) / 10
+    rectb p.x - r, p.y - r, r*2, r*2, 14
+
+  draw_light: (lb, viewport) =>
+    return unless @active
+    p = viewport\apply @pos
+    lb\rect p.x-1, p.y-1, @w+2, @h+2
+
+  update: (world) =>
+    if @active_frame
+      @active_frame += 1
+
+    active = world\touching_entity @, Player
+
+    if not @active and active
+      @active_frame = 0
+
+    @active = active
 
 class Player extends Rect
   health: 2
@@ -760,7 +794,7 @@ class Map extends Rect
       @global_brightness = 0 if @global_brightness < 0
 
   -- draw the entire map
-  draw: (viewport, lb) =>
+  draw: (viewport, lb, world) =>
     {x: vx, y: vy} = viewport.pos
 
     -- for all tiles that fit into the screen
@@ -786,7 +820,7 @@ class Map extends Rect
       x += mox
       y += moy
 
-      -- out of vounds
+      -- out of bounds
       wall = if x >= @tiles_width or x < 0 or y >= @tiles_height or y < 0
         "solid"
       else
@@ -849,10 +883,6 @@ class Viewport extends Rect
       mid_center = (@center! + @target_center) / 2
       @pos = mid_center - Vector @w/2, @h/2
 
-  center_on: (pos) =>
-    @target_center = pos
-    -- @pos = pos - Vector @w/2, @h/2
-
   floating_center_on: (pos, max_len=20) =>
     center = @center!
     -- vector from center to pos
@@ -895,14 +925,18 @@ class World extends Rect
           @add Bug x, y
         when "player"
           @player.pos = Vector x, y
-
+        when "base"
+          assert not @base, "base already exists"
+          @base = Base x,y
+          @add @base
 
     @w = @map.w
     @h = @map.h
     -- music 0
 
   draw: (lb) =>
-    @map\draw @viewport, lb
+    @map\draw @viewport, lb, @
+
     for entity in *@entities
       entity\draw @viewport
 
