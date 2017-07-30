@@ -33,7 +33,7 @@ sounds = {
   shoot: -> sfx 1, "C-4", 16, 3
 }
 
-local Vector, Enemy
+local Vector, Enemy, GameOver
 
 -- call fn every ms
 every = (ms, fn) ->
@@ -479,6 +479,11 @@ class Player extends Rect
     sounds.low_explode!
     world\shake!
 
+  on_die: (world) =>
+    Particle\emit_cross_explosion world, @center!
+    world\set_timeout 2, ->
+      export TIC = GameOver\tic
+
   -- hit by bullet or enemy
   on_hit: (world, e) =>
     return if @is_dead!
@@ -489,7 +494,7 @@ class Player extends Rect
     @health -= 1
 
     if @health <= 0
-      Particle\emit_cross_explosion world, @center!
+      @on_die world
 
   update: (world) =>
     if @is_dead!
@@ -852,6 +857,8 @@ class World extends Rect
     @player = Player 28, 28
     @viewport = Viewport!
 
+    @timers = {}
+
     @entities = {
       @player
     }
@@ -925,6 +932,10 @@ class World extends Rect
 
     @entities_to_remove[to_remove] = true
 
+  -- wait is in seconds
+  set_timeout: (wait, callback) =>
+    frames = wait * FPS
+    table.insert @timers, {frames, callback}
 
   add: (e) =>
     table.insert @entities, e
@@ -951,6 +962,21 @@ class World extends Rect
     if @entities_to_remove
       @entities = [e for e in *@entities when not @entities_to_remove[e]]
       @entities_to_remove = nil
+
+    @update_timers!
+
+  update_timers: =>
+    return unless @timers[1]
+
+    clean_timers = false
+    for timer in *@timers
+      timer[1] -= 1
+      if timer[1] <= 0
+        clean_timers = true
+        timer[2] @
+
+    if clean_timers
+      @timers = [t for t in *@timers when t[1] > 0]
 
   __tostring: =>
     "World()"
@@ -1154,6 +1180,14 @@ class Screen
 
     @update()
 
+class GameOver extends Screen
+  update: =>
+    cls 0
+    print "You have died, sorry!", 10, 10
+    print "Please try again!", 10, 20
+
+class Title extends Screen
+
 class Game extends Screen
   loaded: false
 
@@ -1195,7 +1229,7 @@ class Game extends Screen
     world\draw lightbuffer
 
     clip!
-    util = (time! - start) / 16
+    util = (time! - start) / (1 / FPS * 1000)
     print table.concat({
       "Entities: #{#world.entities}"
       "HP: #{world.player.health}"
