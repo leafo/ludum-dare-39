@@ -634,11 +634,15 @@ class LightBuffer
     @buffer = new_buffer
 
   -- draw the buffer over the whole screen
-  draw: =>
+  draw: (debug=false) =>
     return nil unless @buffer
 
     cell_w = SCREEN_W / @res
     cell_h = SCREEN_W / @res
+
+    if debug
+      cell_w = 1
+      cell_h = 1
 
     k = 1
     for y=1,@h
@@ -689,6 +693,9 @@ export TIC = ->
   lightbuffer\draw!
 
   world\draw!
+
+  lightbuffer\draw true
+
 
   clip!
   util = (time! - start) / 16
