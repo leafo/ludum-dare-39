@@ -1132,51 +1132,68 @@ class LightBuffer
     if debug
       rectb 0, 0, @w, @h, 10
 
-lightbuffer = LightBuffer!
+class Screen
+  loaded: false
 
-f = every 100, ->
-  lightbuffer\blur!
-
-export scanline = (row) ->
-  if row == 0
-    set_palette PAL_GRAD
-
-  if row == VIEW_H
+  on_load: =>
     set_palette PAL_REG
+    export scanline = (row) ->
 
-local world
-export TIC = ->
-  world or= World!
+  tic: =>
+    unless @loaded
+      @on_load!
+      @loaded = true
 
-  start = time!
+    @update()
 
-  world\update!
+class Game extends Screen
+  loaded: false
 
-  cls 0
-  lightbuffer\write world.viewport
+  on_load: =>
+    @world = World!
 
-  for e in *world.entities
-    if e.draw_light
-      e\draw_light lightbuffer, world.viewport
+    @lightbuffer = LightBuffer!
+    @blur_lightbuffer = every 100, -> @lightbuffer\blur!
 
-  lightbuffer\read!
-  f!
+    export scanline = (row) ->
+      if row == 0
+        set_palette PAL_GRAD
 
-  cls 0
-  clip 0, 0, SCREEN_W, VIEW_H
+      if row == VIEW_H
+        set_palette PAL_REG
 
-  unless DEBUG
-    lightbuffer\draw!
+  update: =>
+    {:lightbuffer, :blur_lightbuffer, :world} = @
 
-  world\draw lightbuffer
+    start = time!
+    world\update!
 
-  clip!
-  util = (time! - start) / 16
-  print table.concat({
-    "Entities: #{#world.entities}"
-    tostring world.player.pos
-    tostring world.player.stun_frames
-  }, ", "), 0, SCREEN_H - 6
-  UIBar(util, 0, SCREEN_H - 15, SCREEN_W, 5)\draw!
+    cls 0
+    lightbuffer\write world.viewport
 
+    for e in *world.entities
+      if e.draw_light
+        e\draw_light lightbuffer, world.viewport
+
+    lightbuffer\read!
+    blur_lightbuffer!
+
+    cls 0
+    clip 0, 0, SCREEN_W, VIEW_H
+
+    unless DEBUG
+      lightbuffer\draw!
+
+    world\draw lightbuffer
+
+    clip!
+    util = (time! - start) / 16
+    print table.concat({
+      "Entities: #{#world.entities}"
+      "HP: #{world.player.health}"
+      tostring world.player.pos
+    }, ", "), 0, SCREEN_H - 6
+    UIBar(util, 0, SCREEN_H - 15, SCREEN_W, 5)\draw!
+
+export TIC = Game!\tic
 
