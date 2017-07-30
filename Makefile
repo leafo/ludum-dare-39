@@ -2,7 +2,7 @@
 .PHONY: game run lint
 
 game: merged.moon
-	tic ld39.tic -code merged.moon
+	tic ld39.tic -code merged.moon -sprites sprites.gif
 
 merged.moon: prefix.moon game.moon map2.json
 	cat prefix.moon > merged.moon
