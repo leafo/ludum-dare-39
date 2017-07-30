@@ -502,8 +502,6 @@ class World extends Rect
     @h = @map.h
 
   draw: =>
-    @viewport\center_on @player.pos
-
     @map\draw @viewport
     for entity in *@entities
       entity\draw @viewport
@@ -517,6 +515,8 @@ class World extends Rect
     table.insert @entities, e
 
   update: =>
+    @viewport\center_on @player.pos
+
     for entity in *@entities
       entity\update @
 
@@ -535,7 +535,7 @@ class LightBuffer
   SCREEN = 0
   LINE_WIDTH = SCREEN_W /2
 
-  res: 20 -- number of vertical lines
+  res: 30 -- number of vertical lines
 
   new: =>
     @w = @res
@@ -615,7 +615,6 @@ class LightBuffer
           sum += val
           hit += 1
 
-
       new_buffer[idx] =  sum / hit
 
     -- blur on y axis
@@ -637,26 +636,46 @@ class LightBuffer
   draw: (debug=false) =>
     return nil unless @buffer
 
-    cell_w = SCREEN_W / @res
-    cell_h = SCREEN_W / @res
+    -- this is fractional
+    cell_w = SCREEN_W / @w
+    cell_h = SCREEN_H / @h
 
     if debug
       cell_w = 1
       cell_h = 1
 
-    k = 1
-    for y=1,@h
-      for x=1,@w
-        c = floor @buffer[k]
-        tx, ty = (x - 1) * cell_w, (y - 1) * cell_h
+    tx, ty = 0,0
+    for k=1,@w*@h
+      c = floor @buffer[k]
 
-        rect(
-          tx, ty
-          cell_w, cell_h
-          c
-        )
+      ftx = floor tx
+      fty = floor ty
 
-        k += 1
+      -- fill the y gaps
+      bottom = ty + cell_h
+      bottom = floor bottom + 0.5
+      real_h = bottom - fty
+
+      -- fill the x gaps
+      right = tx + cell_w
+      right = floor right + 0.5
+      real_w = right - ftx
+
+      rect(
+        ftx, fty
+        real_w, real_h
+        c
+      )
+
+      -- increment position
+      if k % @w == 0
+        tx = 0
+        ty += cell_h
+      else
+        tx += cell_w
+
+    if debug
+      rectb 0, 0, @w, @h, 10
 
 lightbuffer = LightBuffer!
 
@@ -693,9 +712,7 @@ export TIC = ->
   lightbuffer\draw!
 
   world\draw!
-
   lightbuffer\draw true
-
 
   clip!
   util = (time! - start) / 16
