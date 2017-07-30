@@ -127,6 +127,32 @@ fit_move = (obj, move, world) ->
 
   hit_x, hit_y
 
+
+-- gets the buckets that this rect hits in the grid
+-- implemented as stateless iterator
+grid_ids = do
+  hash_pt = (x,y) -> "#{x}.#{y}"
+  (rect, grid_size=40, k=0) ->
+    x, y, w, h = rect\unpack!
+
+    x2 = x + w
+    y2 = y + h
+
+    x = floor x / grid_size
+    y = floor y / grid_size
+
+    steps_x = floor(x2 / grid_size) - x + 1
+    steps_y = floor(y2 / grid_size) - y + 1
+    total_steps = steps_x * steps_y
+
+    return nil, "out of range: #{k}" if k >= total_steps
+
+    hx = x + (k % steps_x)
+    hy = y + floor(k / steps_x)
+    has_more = k + 1 < total_steps
+
+    hash_pt(hx, hy), has_more and k + 1 or nil, steps_x, steps_y
+
 class Vector
   x: 0
   y: 0
@@ -733,6 +759,9 @@ class World extends Rect
 
     -- @viewport\draw!
 
+  touching_entities: (e) =>
+    -- build the grid if it doesn't exist
+
   remove: (to_remove) =>
     @entities = [e for e in *@entities when e != to_remove]
 
@@ -987,5 +1016,35 @@ export TIC = ->
     tostring world\collides world.player
   }, ", "), 0, SCREEN_H - 6
   UIBar(util, 0, SCREEN_H - 15, SCREEN_W, 5)\draw!
+
+
+--
+print ">> all 4"
+r = Rect(-5,-5, 10, 10)
+print grid_ids r
+print grid_ids r, nil, 1
+print grid_ids r, nil, 2
+print grid_ids r, nil, 3
+
+--
+print ">> bottom right"
+r = Rect(0,0, 10, 10)
+print grid_ids r
+
+--
+print ">> top two"
+r = Rect(-5,-10, 8, 8)
+print grid_ids r
+print grid_ids r, nil, 1
+
+--
+print ">> bigger than"
+r = Rect(5,30,80, 20)
+print grid_ids r
+print grid_ids r, nil, 1
+print grid_ids r, nil, 2
+print grid_ids r, nil, 3
+print grid_ids r, nil, 4
+print grid_ids r, nil, 5
 
 
