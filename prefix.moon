@@ -42,6 +42,7 @@ PAL_REG = {
   "D2AA99"
   "6DC2CA"
   "DAD45E"
+  "DEEED6"
 }
 
 TILE_W = 8
