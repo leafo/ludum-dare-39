@@ -493,42 +493,6 @@ class Map extends Rect
         rot
       )
 
-  -- draws every tile slowly, good for debugging
-  draw_old: (viewport, lb) =>
-    {x: vx, y: vy} = viewport.pos
-
-    for idx, wall in ipairs @walls
-      continue unless wall
-      -- continue if wall == "solid"
-
-      x = (idx - 1) % @tiles_width
-      y = floor (idx - 1) / @tiles_width
-
-      tx, ty = x * TILE_W, y * TILE_H
-      tx -= vx
-      ty -= vy
-
-      if wall == "solid"
-        spr 0, tx, ty
-        continue
-
-      rot = @rotations[wall]
-      continue unless rot
-
-      b = lb\light_for_pos Vector tx + TILE_W / 2, ty + TILE_H / 2
-      continue if b == 0
-
-      b = math.pow b, 0.4
-      levels = #@wall_sprites
-      sprite_idx = math.min levels, floor(b * levels) + 1
-
-      spr(
-        @wall_sprites[sprite_idx]
-        tx, ty
-        -1, 1, 0
-        rot
-      )
-
 class Viewport extends Rect
   w: SCREEN_W
   h: VIEW_H
