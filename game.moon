@@ -319,6 +319,21 @@ class Particle extends Rect
       accel = -dir / 40
       world\add @ origin, dir, accel
 
+  @emit_cross_explosion: (world, origin) =>
+    sounds.explode!
+
+    --- shoot circles out in all dirs
+    for rad=0,PI*2-1,PI/2
+      dir = Vector\from_radians rad
+
+      world\add with @ origin
+        .light_radius = 10
+        .radius = 10
+        .type = "circle"
+        .life = 500 * random_normal!
+        .vel = dir * 5
+        .friction = 1.1
+
   @emit_explosion: (world, origin) =>
     sounds.explode!
 
@@ -341,21 +356,13 @@ class Particle extends Rect
         .type = "circle"
         .life = 500 * random_normal!
 
-  draw_light: (lb, viewport) =>
-    light = floor (1 - @p!) * 5
-    p = viewport\apply @pos
-    lb\rect(
-      p.x - @light_radius
-      p.y - @light_radius
-      @w + @light_radius * 2
-      @h + @light_radius * 2
-      light
-    )
-
   new: (@pos, @vel=Vector!, @accel=Vector!) =>
 
   update: (world) =>
     @vel += @accel
+    if @friction
+      @vel = @vel / @friction
+
     @pos += @vel
 
     @spawn or= time!
@@ -369,11 +376,25 @@ class Particle extends Rect
   -- percentage of life lived
   p: =>
     return 0 unless @spawn
-    math.max 0, math.min 1, (time! - @spawn) / @life
+    p = math.max 0, math.min 1, (time! - @spawn) / @life
+    if @inverse
+      1 - p
+    else
+      p
+
+  draw_light: (lb, viewport) =>
+    light = floor (1 - @p!) * 5
+    p = viewport\apply @pos
+    lb\rect(
+      p.x - @light_radius
+      p.y - @light_radius
+      @w + @light_radius * 2
+      @h + @light_radius * 2
+      light
+    )
 
   draw: (viewport) =>
     color = floor math.pow(1 - @p!, 0.8) * 12
-
     switch @type
       when "rect"
         pos = viewport\apply @pos
@@ -581,6 +602,7 @@ class Enemy extends Rect
   on_hit: (world, bullet) =>
     @shake!
     world.map\flash!
+    Particle\emit_cross_explosion world, @center!
 
   update: =>
     if @shake_frames > 0
