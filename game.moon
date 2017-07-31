@@ -450,6 +450,10 @@ class Base extends Rect
 
     active = touching or world\stage_clear!
 
+    if touching and world\stage_clear!
+      if btnp 5
+        world\goto_next_level!
+
     if not @active and active
       @active_frame = 0
 
@@ -917,7 +921,7 @@ class Viewport extends Rect
 class World extends Rect
   holes_count: 0
 
-  new: =>
+  new: (map_data) =>
     super!
 
     @player = Player 28, 28
@@ -931,12 +935,14 @@ class World extends Rect
       @player
     }
 
-    @map = Map\load_for_tiles MAP_1
+    @map = Map\load_for_tiles map_data
     for object in *@map.objects
       {x, y} = object
       switch object.type
         when "enemy"
-          @add DarkHole x, y
+          hole = DarkHole!
+          hole\center_on Vector x,y
+          @add hole
         when "bug"
           @add Bug x, y
         when "player"
@@ -1046,7 +1052,7 @@ class World extends Rect
     @hud\update @
 
     -- if btnp 6
-    --   @shake!
+    --   @goto_next_level!
 
     @build_collision_grid!
     for entity in *@entities
@@ -1365,9 +1371,19 @@ class Hud
 
 class Game extends Screen
   loaded: false
+  levels: {
+    MAP_1
+    MAP_2
+  }
+
+  new: (@current_level=1) =>
 
   on_load: =>
-    @world = World!
+    map = @levels[(@current_level - 1) % #@levels + 1]
+    @world = World map
+
+    @world.goto_next_level = ->
+      export TIC = Game(@current_level + 1)\tic
 
     @lightbuffer = LightBuffer!
     @blur_lightbuffer = every 100, -> @lightbuffer\blur!
