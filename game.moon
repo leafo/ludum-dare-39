@@ -35,7 +35,7 @@ sounds = {
   game_over: -> sfx 6, "C-5", 32, 3
 }
 
-local Vector, Enemy, GameOver, Game, Title
+local Vector, Enemy, GameOver, Game, Title, Hud
 
 -- call fn every ms
 every = (ms, fn) ->
@@ -258,6 +258,10 @@ class Rect
   center_on: (pos) =>
     @pos = pos - Vector @w/2, @h/2
 
+  bottom: => @pos.y + @h
+  right: => @pos.x + @w
+
+
 class UIBar extends Rect
   p: 0
 
@@ -432,7 +436,19 @@ class Base extends Rect
     if @active_frame
       @active_frame += 1
 
-    active = world\touching_entity @, Player
+    touching = world\touching_entity @, Player
+
+    message = if touching
+      if world\stage_clear!
+        "Press button 2 to continue to next level"
+      else
+        "HELLO! Destroy the black holes and return"
+    else
+      nil
+
+    world.hud\set_current_message message
+
+    active = touching or world\stage_clear!
 
     if not @active and active
       @active_frame = 0
@@ -485,17 +501,6 @@ class Player extends Rect
         pos += d * 2
 
       dist = 15
-
-      -- -- draw reticle
-      -- ab = center + d\rotate(PI/4) * dist
-      -- ab2 = center + d\rotate(-PI/4) * dist
-      -- ab3 = center + d\rotate(PI/4 + PI) * dist
-      -- ab4 = center + d\rotate(-PI/4 + PI) * dist
-
-      -- line ab.x, ab.y, ab2.x, ab2.y, 11
-      -- line ab2.x, ab2.y, ab3.x, ab3.y, 11
-      -- line ab3.x, ab3.y, ab4.x, ab4.y, 11
-      -- line ab4.x, ab4.y, ab.x, ab.y, 11
 
   is_dead: =>
     @health <= 0
@@ -918,6 +923,8 @@ class World extends Rect
     @player = Player 28, 28
     @viewport = Viewport!
 
+    @hud = Hud!
+
     @timers = {}
 
     @entities = {
@@ -938,6 +945,8 @@ class World extends Rect
           assert not @base, "base already exists"
           @base = Base x,y
           @add @base
+
+    @max_holes = @holes_count
 
     @w = @map.w
     @h = @map.h
@@ -1034,6 +1043,7 @@ class World extends Rect
     @viewport\floating_center_on @player.pos + @player.aim_dir * 10
     @viewport\update!
     @map\update @
+    @hud\update @
 
     -- if btnp 6
     --   @shake!
@@ -1315,6 +1325,44 @@ class Title extends Screen
 
     spr 128, 83, 36, 7, 1, 0, 0, 8, 8
 
+
+class Hud
+  top: VIEW_H
+  left: 0
+
+  current_message: nil
+
+  new: =>
+    @mid = math.floor SCREEN_W/2
+    @hp_bar = UIBar 0, @left, @top, @mid - 2, 7
+    @energy_bar = UIBar 0, @mid + 2, @top, @mid - 2, 7
+
+  set_current_message: (cm) =>
+    if cm != @current_message
+      @current_message = cm
+      @current_message_letters = 0
+
+  update: (world) =>
+    if @current_message_letters
+      @current_message_letters += 1
+
+    @hp_bar.p = world.player.health / 3
+    @energy_bar.p = 1 - world.holes_count / world.max_holes
+
+  draw: =>
+    @hp_bar\draw!
+    unless @current_message
+      print "Health", @hp_bar.pos.x, @hp_bar\bottom! + 2, 7
+
+    @energy_bar\draw 8
+    unless @current_message
+      print "Energy", @energy_bar.pos.x, @energy_bar\bottom! + 2, 7
+
+    if @current_message
+      m = @current_message\sub 1, floor (@current_message_letters or 0) / 2
+      print m, @hp_bar.pos.x, @hp_bar\bottom! + 2
+
+
 class Game extends Screen
   loaded: false
 
@@ -1332,7 +1380,7 @@ class Game extends Screen
         set_palette PAL_REG
 
   update: =>
-    {:lightbuffer, :blur_lightbuffer, :world} = @
+    {:lightbuffer, :blur_lightbuffer, :world, :hud} = @
 
     start = time!
     world\update!
@@ -1356,13 +1404,14 @@ class Game extends Screen
     world\draw lightbuffer
 
     clip!
-    util = (time! - start) / (1 / FPS * 1000)
-    print table.concat({
-      "Entities: #{#world.entities}"
-      "HP: #{world.player.health}"
-      "Holes: #{world.holes_count}"
-    }, ", "), 0, SCREEN_H - 6
-    UIBar(util, 0, SCREEN_H - 15, SCREEN_W, 5)\draw!
+    world.hud\draw!
+    -- util = (time! - start) / (1 / FPS * 1000)
+    -- print table.concat({
+    --   "Entities: #{#world.entities}"
+    --   "HP: #{world.player.health}"
+    --   "Holes: #{world.holes_count}"
+    -- }, ", "), 0, SCREEN_H - 6
+    -- UIBar(util, 0, SCREEN_H - 15, SCREEN_W, 5)\draw!
 
 export TIC = Game!\tic
 -- export TIC = Title!\tic
