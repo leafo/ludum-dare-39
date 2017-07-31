@@ -440,7 +440,7 @@ class Base extends Rect
     @active = active
 
 class Player extends Rect
-  health: 2
+  health: 3
   w: 10
   h: 10
   collidable: true
@@ -641,21 +641,23 @@ class Enemy extends Rect
       @on_die world
       world\remove @
 
+class DarkHole extends Enemy
+
 -- bug will move around and charge
 class Bug extends Enemy
-  update: (world, lb) =>
-
   draw_light: false
 
   draw: (viewport) =>
     Rect.draw @, viewport, 10
+
+  update: (...) =>
+    super
 
 class ShootBug extends Enemy
   new: (...) =>
     super
 
   update: (world) =>
-
 
 class SprayBug extends Enemy
   new: (...) =>
@@ -788,7 +790,7 @@ class Map extends Rect
   flash: (amount=1.0) =>
     @global_brightness = amount
 
-  update: =>
+  update: (world) =>
     if @global_brightness > 0
       @global_brightness -= 0.03
       @global_brightness = 0 if @global_brightness < 0
@@ -903,6 +905,8 @@ class Viewport extends Rect
     rectb p.x, p.y, @w, @h, 15
 
 class World extends Rect
+  holes_count: 0
+
   new: =>
     super!
 
@@ -920,7 +924,7 @@ class World extends Rect
       {x, y} = object
       switch object.type
         when "enemy"
-          @add Enemy x, y
+          @add DarkHole x, y
         when "bug"
           @add Bug x, y
         when "player"
@@ -933,6 +937,9 @@ class World extends Rect
     @w = @map.w
     @h = @map.h
     -- music 0
+
+  stage_clear: =>
+    @holes_count == 0
 
   draw: (lb) =>
     @map\draw @viewport, lb, @
@@ -984,19 +991,25 @@ class World extends Rect
           return other_e
 
 
-  remove: (to_remove) =>
-    unless @entities_to_remove
-      @entities_to_remove = {}
-
-    @entities_to_remove[to_remove] = true
-
   -- wait is in seconds
   set_timeout: (wait, callback) =>
     frames = wait * FPS
     table.insert @timers, {frames, callback}
 
   add: (e) =>
+    if instance_of e, DarkHole
+      @holes_count += 1
+
     table.insert @entities, e
+
+  remove: (to_remove) =>
+    if instance_of to_remove, DarkHole
+      @holes_count -= 1
+
+    unless @entities_to_remove
+      @entities_to_remove = {}
+
+    @entities_to_remove[to_remove] = true
 
   collides: (obj) =>
     @map\collides obj
@@ -1008,7 +1021,7 @@ class World extends Rect
   update: =>
     @viewport\floating_center_on @player.pos + @player.aim_dir * 10
     @viewport\update!
-    @map\update!
+    @map\update @
 
     -- if btnp 6
     --   @shake!
@@ -1335,7 +1348,7 @@ class Game extends Screen
     print table.concat({
       "Entities: #{#world.entities}"
       "HP: #{world.player.health}"
-      tostring world.player.pos
+      "Holes: #{world.holes_count}"
     }, ", "), 0, SCREEN_H - 6
     UIBar(util, 0, SCREEN_H - 15, SCREEN_W, 5)\draw!
 
