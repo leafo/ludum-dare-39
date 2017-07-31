@@ -651,7 +651,7 @@ class Bug extends Enemy
     Rect.draw @, viewport, 10
 
   update: (...) =>
-    super
+    super ...
 
 class ShootBug extends Enemy
   new: (...) =>
@@ -791,9 +791,14 @@ class Map extends Rect
     @global_brightness = amount
 
   update: (world) =>
-    if @global_brightness > 0
-      @global_brightness -= 0.03
-      @global_brightness = 0 if @global_brightness < 0
+    if world\stage_clear!
+      if @global_brightness < 1
+        @global_brightness += 0.03
+        @global_brightness = 1 if @global_brightness >= 1
+    else
+      if @global_brightness > 0
+        @global_brightness -= 0.03
+        @global_brightness = 0 if @global_brightness < 0
 
   -- draw the entire map
   draw: (viewport, lb, world) =>
@@ -938,6 +943,11 @@ class World extends Rect
     @h = @map.h
     -- music 0
 
+  on_clear: =>
+    -- so we can fade in
+    sounds.game_start!
+    @map.global_brightness = 0
+
   stage_clear: =>
     @holes_count == 0
 
@@ -1005,6 +1015,8 @@ class World extends Rect
   remove: (to_remove) =>
     if instance_of to_remove, DarkHole
       @holes_count -= 1
+      if @holes_count == 0
+        @on_clear!
 
     unless @entities_to_remove
       @entities_to_remove = {}
