@@ -31,11 +31,11 @@ sounds = {
   explode: -> sfx 0, "C-4", 16, 3
   low_explode: -> sfx 0, "C-3", 13, 3
   shoot: -> sfx 1, "C-4", 16, 3
-  game_start: -> sfx 5, "C-5", 32, 3
+  game_start: -> sfx 5, "C-5", 64, 3
   game_over: -> sfx 6, "C-5", 32, 3
 }
 
-local Vector, Enemy, GameOver, Game, Title, Hud
+local Vector, Enemy, GameOver, Game, Title, Hud, Player
 
 -- call fn every ms
 every = (ms, fn) ->
@@ -385,12 +385,14 @@ class Bullet extends Rect
   new: (pos, @dir) =>
     @pos = pos - Vector @w / 2, @h / 2
 
+  target_class: => Enemy
+
   update: (world) =>
     @pos += @dir
 
     is_hit = world\collides @
-    if enemy = not is_hit and world\touching_entity @, Enemy
-      enemy\on_hit world, @
+    if obj = not is_hit and world\touching_entity @, @target_class!
+      obj\on_hit world, @
       is_hit = true
 
     if is_hit
@@ -412,6 +414,13 @@ class Bullet extends Rect
   __tostring: =>
     "Bullet(#{@pos}, #{@w}, #{@h})"
 
+class EnemyBullet extends Bullet
+  target_class: => Player
+  draw: (viewport) =>
+    x, y = viewport\apply(@center!)\unpack!
+    r = floor @w/2
+    circ x, y, r + 1, 15
+    circ x, y, r, 3
 
 class Base extends Rect
   w: 48
@@ -452,6 +461,7 @@ class Base extends Rect
 
     if touching and world\stage_clear!
       if btnp 5
+        sounds.game_start!
         world\goto_next_level!
 
     if not @active and active
@@ -535,7 +545,10 @@ class Player extends Rect
     return if @is_dead!
 
     @stun_dir = (@center! - e\center!)\normalized! * 10
-    e\shake world
+
+    if e.shake
+      e\shake world
+
     @stun world
     @health -= 1
 
@@ -654,13 +667,36 @@ class DarkHole extends Enemy
 
 -- bug will move around and charge
 class Bug extends Enemy
-  draw_light: false
+  w: 12
+  h: 12
+
+  new: (...) =>
+    super ...
+    @shoot_every = every 1000, (world) ->
+      @shoot world
+
+  draw_light: (lb, viewport) =>
+    p = viewport\apply @pos
+    lb\rect p.x, p.y, @w, @h
 
   draw: (viewport) =>
-    Rect.draw @, viewport, 10
+    center = viewport\apply @center!
+    p = center - Vector 8, 8
+    spr 64, p.x, p.y, 0, 1, 0, 0, 2,2
 
   update: (...) =>
     super ...
+    @.shoot_every ...
+
+  shoot: (world) =>
+    center = @center!
+    target = world.player\center!
+    dir = target - center
+    distance = dir\len!
+    return if distance > 130
+    
+    dir = dir\normalized!
+    world\add EnemyBullet center, dir * 2
 
 class ShootBug extends Enemy
   new: (...) =>
@@ -956,7 +992,6 @@ class World extends Rect
 
     @w = @map.w
     @h = @map.h
-    -- music 0
 
   on_clear: =>
     -- so we can fade in
@@ -1298,6 +1333,7 @@ class Title extends Screen
   on_load: =>
     super!
     @frame = 0
+    music 0
 
   -- create vector field
   draw_grid: =>
@@ -1372,18 +1408,22 @@ class Hud
 class Game extends Screen
   loaded: false
   levels: {
+    -- MAP_TEST
     MAP_1
     MAP_2
+    MAP_3
   }
 
   new: (@current_level=1) =>
 
   on_load: =>
+    music!
     map = @levels[(@current_level - 1) % #@levels + 1]
     @world = World map
 
     @world.goto_next_level = ->
       export TIC = Game(@current_level + 1)\tic
+
 
     @lightbuffer = LightBuffer!
     @blur_lightbuffer = every 100, -> @lightbuffer\blur!
@@ -1418,6 +1458,8 @@ class Game extends Screen
       lightbuffer\draw!
 
     world\draw lightbuffer
+    print "Lv. #{@current_level}", 1, 1, 1
+    print "Lv. #{@current_level}", 0, 0
 
     clip!
     world.hud\draw!
@@ -1429,6 +1471,6 @@ class Game extends Screen
     -- }, ", "), 0, SCREEN_H - 6
     -- UIBar(util, 0, SCREEN_H - 15, SCREEN_W, 5)\draw!
 
-export TIC = Game!\tic
--- export TIC = Title!\tic
+-- export TIC = Game!\tic
+export TIC = Title!\tic
 
